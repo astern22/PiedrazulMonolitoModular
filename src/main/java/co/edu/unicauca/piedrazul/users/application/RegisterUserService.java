@@ -19,7 +19,7 @@ public class RegisterUserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public void register(RegisterRequest request) {
+    public UserEntity register(RegisterRequest request) {
 
         UserEntity user = new UserEntity();
 
@@ -35,6 +35,6 @@ public class RegisterUserService {
 
         user.setEnabled(true);
 
-        repository.save(user);
+        return repository.save(user);
     }
 }
