@@ -1,8 +1,9 @@
-package co.edu.unicauca.piedrazul.appointments;
+package co.edu.unicauca.piedrazul.appointments.infrastructure.persistence;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+
 import org.springframework.format.annotation.DateTimeFormat;
 
 import jakarta.persistence.*;
@@ -10,7 +11,7 @@ import jakarta.validation.constraints.NotNull;
 
 @Entity
 @Table(name = "appointments")
-public class Appointment {
+public class AppointmentEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,9 +44,18 @@ public class Appointment {
     @Column(name = "status", length = 20)
     private String status;
 
-    @NotNull
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    public AppointmentEntity() {
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
+    }
 
     public Long getId() {
         return id;
@@ -110,6 +120,5 @@ public class Appointment {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
-
-   
 }
+
