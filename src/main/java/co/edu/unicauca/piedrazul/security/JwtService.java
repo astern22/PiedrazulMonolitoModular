@@ -46,10 +46,12 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
+    @SuppressWarnings("null")
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
+    @SuppressWarnings("null")
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
