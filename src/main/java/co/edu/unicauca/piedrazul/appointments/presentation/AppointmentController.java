@@ -4,6 +4,9 @@ import java.util.List;
 
 import co.edu.unicauca.piedrazul.appointments.application.AppointmentService;
 import co.edu.unicauca.piedrazul.appointments.infrastructure.persistence.AppointmentEntity;
+import co.edu.unicauca.piedrazul.appointments.presentation.command.CreateAppointmentCommand;
+import co.edu.unicauca.piedrazul.appointments.presentation.dto.AppointmentRequest;
+import co.edu.unicauca.piedrazul.appointments.presentation.dto.AppointmentResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,9 +23,32 @@ public class AppointmentController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<AppointmentEntity> createAppointment(@Valid @RequestBody AppointmentEntity appointment) {
-        AppointmentEntity createdAppointment = service.createAppointment(appointment);
-        return ResponseEntity.ok(createdAppointment);
+    public ResponseEntity<AppointmentResponse> createAppointment(
+            @Valid @RequestBody AppointmentRequest request) {
+
+        CreateAppointmentCommand command =
+                new CreateAppointmentCommand(
+                        request.patientId(),
+                        request.professionalId(),
+                        request.appointmentDate(),
+                        request.startTime(),
+                        request.endTime()
+                );
+
+        AppointmentEntity createdAppointment =
+                service.createAppointment(command);
+
+        AppointmentResponse response = new AppointmentResponse(
+                createdAppointment.getId(),
+                createdAppointment.getPatientId(),
+                createdAppointment.getProfessionalId(),
+                createdAppointment.getAppointmentDate(),
+                createdAppointment.getStartTime(),
+                createdAppointment.getEndTime(),
+                createdAppointment.getStatus()
+        );
+
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}")
