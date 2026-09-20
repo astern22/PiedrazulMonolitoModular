@@ -1,5 +1,6 @@
 package co.edu.unicauca.piedrazul.appointments.presentation;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import co.edu.unicauca.piedrazul.appointments.application.AppointmentService;
@@ -107,6 +108,17 @@ public class AppointmentController {
         } else {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    @GetMapping("/search")
+    public List<AppointmentEntity> search(
+            @RequestParam Long professionalId,
+            @RequestParam LocalDate date) {
+
+        return service.findAppointments(
+                professionalId,
+                date
+        );
     }
 }
 

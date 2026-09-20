@@ -5,6 +5,7 @@ import co.edu.unicauca.piedrazul.appointments.infrastructure.persistence.Appoint
 import co.edu.unicauca.piedrazul.appointments.presentation.command.CreateAppointmentCommand;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -59,6 +60,14 @@ public class AppointmentService {
 
     public void deleteAppointment(Long id) {
         repository.deleteById(id);
+    }
+
+    public List<AppointmentEntity> findAppointments(Long professionalId, LocalDate date) {
+        return repository
+                .findByProfessionalIdAndAppointmentDate(
+                        professionalId,
+                        date
+                );
     }
 }
 
