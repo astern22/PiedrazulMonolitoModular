@@ -1,0 +1,173 @@
+-- Eliminar tablas
+DROP TABLE IF EXISTS appointments CASCADE;
+DROP TABLE IF EXISTS weekly_availability CASCADE;
+DROP TABLE IF EXISTS system_settings CASCADE;
+DROP TABLE IF EXISTS patients CASCADE;
+DROP TABLE IF EXISTS professionals CASCADE;
+DROP TABLE IF EXISTS specialties CASCADE;
+DROP TABLE IF EXISTS user_roles CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS roles CASCADE;
+
+-- Limpiar tablas
+TRUNCATE TABLE
+    appointments,
+    weekly_availability,
+    system_settings,
+    patients,
+    professionals,
+    specialties,
+    user_roles,
+    users,
+    roles
+RESTART IDENTITY CASCADE;
+
+-- Eliminar
+DROP DATABASE IF EXISTS piedrazulDB;
+DROP SCHEMA IF EXISTS piedrazul CASCADE;
+DROP ROLE IF EXISTS piedrazul_admin;
+
+-- Crear rol propietario
+CREATE ROLE piedrazul_admin LOGIN PASSWORD 'Piedrazul123.'CREATEDB;
+
+-- Crear DB
+CREATE DATABASE piedrazulDB
+WITH
+    ENCODING = 'UTF8';
+
+-- Crear schema
+CREATE SCHEMA IF NOT EXISTS piedrazul AUTHORIZATION piedrazul_admin;
+
+SET search_path TO piedrazul;
+
+-- Tablas
+CREATE TABLE roles (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(30) NOT NULL UNIQUE
+);
+
+CREATE TABLE users (
+    id BIGSERIAL PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    full_name VARCHAR(150) NOT NULL,
+    email VARCHAR(120) NOT NULL UNIQUE,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE user_roles (
+    user_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
+
+    PRIMARY KEY (user_id, role_id),
+
+    CONSTRAINT fk_user_roles_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id),
+
+    CONSTRAINT fk_user_roles_role
+        FOREIGN KEY (role_id)
+        REFERENCES roles(id)
+);
+
+CREATE TABLE specialties (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE
+);
+
+CREATE TABLE professionals (
+    id BIGSERIAL PRIMARY KEY,
+
+    user_id BIGINT NOT NULL UNIQUE,
+
+    specialty_id BIGINT NOT NULL,
+
+    professional_type VARCHAR(20) NOT NULL,
+
+    appointment_interval_minutes INTEGER NOT NULL,
+
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    CONSTRAINT fk_professional_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id),
+
+    CONSTRAINT fk_professional_specialty
+        FOREIGN KEY (specialty_id)
+        REFERENCES specialties(id)
+);
+
+CREATE TABLE patients (
+    id BIGSERIAL PRIMARY KEY,
+
+    user_id BIGINT UNIQUE,
+
+    document_number VARCHAR(20) NOT NULL UNIQUE,
+
+    phone VARCHAR(20),
+
+    birth_date DATE,
+
+    CONSTRAINT fk_patient_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+);
+
+CREATE TABLE system_settings (
+    id BIGSERIAL PRIMARY KEY,
+
+    booking_window_weeks INTEGER NOT NULL
+);
+
+CREATE TABLE weekly_availability (
+    id BIGSERIAL PRIMARY KEY,
+
+    professional_id BIGINT NOT NULL,
+
+    day_of_week SMALLINT NOT NULL,
+
+    start_time TIME NOT NULL,
+
+    end_time TIME NOT NULL,
+
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    CONSTRAINT fk_availability_professional
+        FOREIGN KEY (professional_id)
+        REFERENCES professionals(id)
+);
+
+CREATE TABLE appointments (
+    id BIGSERIAL PRIMARY KEY,
+
+    patient_id BIGINT NOT NULL,
+
+    professional_id BIGINT NOT NULL,
+
+    appointment_date DATE NOT NULL,
+
+    start_time TIME NOT NULL,
+
+    end_time TIME NOT NULL,
+
+    status VARCHAR(20) NOT NULL,
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_appointment_patient
+        FOREIGN KEY (patient_id)
+        REFERENCES patients(id),
+
+    CONSTRAINT fk_appointment_professional
+        FOREIGN KEY (professional_id)
+        REFERENCES professionals(id)
+);
+
+-- Evita doble reserva del mismo profesional
+CREATE UNIQUE INDEX uk_professional_slot
+ON appointments (
+    professional_id,
+    appointment_date,
+    start_time
+);
