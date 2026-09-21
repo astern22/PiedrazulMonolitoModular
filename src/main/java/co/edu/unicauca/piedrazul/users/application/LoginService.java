@@ -40,7 +40,7 @@ public class LoginService {
 
         if (!valid) {
             throw new RuntimeException(
-                    "Credenciales inválidas"
+                    "Credenciales invalidas"
             );
         }
 

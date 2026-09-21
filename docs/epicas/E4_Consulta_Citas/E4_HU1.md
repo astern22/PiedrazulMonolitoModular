@@ -2,7 +2,7 @@
 
 **Como** agendador de citas,
 
-**Necesito** listar las citas médicas de un determinado médico/terapista
+**Necesito** listar las citas medicas de un determinado medico/terapista
 en una fecha determinada,
 
 **Para** visualizar el listado y la cantidad de citas.

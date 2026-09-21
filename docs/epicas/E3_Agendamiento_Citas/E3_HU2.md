@@ -4,7 +4,7 @@
 
 **Necesito** agendar una cita mediante la web,
 
-**Para** tener una cita de manera sencilla y rápida sin tener que usar WhatsApp
+**Para** tener una cita de manera sencilla y rapida sin tener que usar WhatsApp
 
 ---
 
