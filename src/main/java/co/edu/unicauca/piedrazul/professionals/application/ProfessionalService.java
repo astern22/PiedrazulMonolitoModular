@@ -18,6 +18,31 @@ public class ProfessionalService {
         this.repository = repository;
     }
 
+    public ProfessionalEntity create(
+            ProfessionalRequest request) {
+
+        if (repository.existsByUserId(request.userId())) {
+            throw new RuntimeException(
+                    "El usuario ya está registrado como profesional"
+            );
+        }
+
+        ProfessionalEntity professional =
+                new ProfessionalEntity();
+
+        professional.setUserId(request.userId());
+        professional.setSpecialtyId(request.specialtyId());
+        professional.setProfessionalType(
+                request.professionalType()
+        );
+        professional.setAppointmentIntervalMinutes(
+                request.appointmentIntervalMinutes()
+        );
+        professional.setActive(true);
+
+        return repository.save(professional);
+    }
+
     public List<ProfessionalEntity> findAll() {
         return repository.findAll();
     }

@@ -24,6 +24,20 @@ public class ProfessionalController {
         this.service = service;
     }
 
+    @PostMapping
+    public ResponseEntity<ProfessionalResponse> create(
+            @Valid @RequestBody ProfessionalRequest request) {
+
+        ProfessionalEntity professional =
+                service.create(request);
+
+        return ResponseEntity.ok(
+                ProfessionalResponse.fromEntity(
+                        professional
+                )
+        );
+    }
+
     @GetMapping
     public ResponseEntity<List<ProfessionalResponse>> findAll() {
         List<ProfessionalResponse> professionals =
