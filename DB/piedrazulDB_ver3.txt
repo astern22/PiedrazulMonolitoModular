@@ -1,26 +1,24 @@
 -- Eliminar tablas
-DROP TABLE IF EXISTS appointments CASCADE;
-DROP TABLE IF EXISTS weekly_availability CASCADE;
-DROP TABLE IF EXISTS system_settings CASCADE;
-DROP TABLE IF EXISTS patients CASCADE;
-DROP TABLE IF EXISTS professionals CASCADE;
-DROP TABLE IF EXISTS specialties CASCADE;
-DROP TABLE IF EXISTS user_roles CASCADE;
-DROP TABLE IF EXISTS users CASCADE;
-DROP TABLE IF EXISTS roles CASCADE;
+DROP TABLE IF EXISTS piedrazul.appointments CASCADE;
+DROP TABLE IF EXISTS piedrazul.weekly_availability CASCADE;
+DROP TABLE IF EXISTS piedrazul.system_settings CASCADE;
+DROP TABLE IF EXISTS piedrazul.patients CASCADE;
+DROP TABLE IF EXISTS piedrazul.professionals CASCADE;
+DROP TABLE IF EXISTS piedrazul.specialties CASCADE;
+DROP TABLE IF EXISTS piedrazul.user_roles CASCADE;
+DROP TABLE IF EXISTS piedrazul.users CASCADE;
+DROP TABLE IF EXISTS piedrazul.roles CASCADE;
 
 -- Limpiar tablas
-TRUNCATE TABLE
-    appointments,
-    weekly_availability,
-    system_settings,
-    patients,
-    professionals,
-    specialties,
-    user_roles,
-    users,
-    roles
-RESTART IDENTITY CASCADE;
+TRUNCATE TABLE piedrazul.appointments RESTART IDENTITY CASCADE;
+TRUNCATE TABLE piedrazul.weekly_availability RESTART IDENTITY CASCADE;
+TRUNCATE TABLE piedrazul.system_settings RESTART IDENTITY CASCADE;
+TRUNCATE TABLE piedrazul.patients RESTART IDENTITY CASCADE;
+TRUNCATE TABLE piedrazul.professionals RESTART IDENTITY CASCADE;
+TRUNCATE TABLE piedrazul.specialties RESTART IDENTITY CASCADE;
+TRUNCATE TABLE piedrazul.user_roles RESTART IDENTITY CASCADE;
+TRUNCATE TABLE piedrazul.users RESTART IDENTITY CASCADE;
+TRUNCATE TABLE piedrazul.roles RESTART IDENTITY CASCADE;
 
 -- Eliminar
 DROP DATABASE IF EXISTS piedrazulDB;
@@ -30,10 +28,14 @@ DROP ROLE IF EXISTS piedrazul_admin;
 -- Crear rol propietario
 CREATE ROLE piedrazul_admin LOGIN PASSWORD 'Piedrazul123.'CREATEDB;
 
+GRANT USAGE ON SCHEMA piedrazul TO piedrazul_admin;
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA piedrazul TO piedrazul_admin;
+
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA piedrazul TO piedrazul_admin;
+
 -- Crear DB
-CREATE DATABASE piedrazulDB
-WITH
-    ENCODING = 'UTF8';
+CREATE DATABASE piedrazulDB WITH ENCODING = 'UTF8';
 
 -- Crear schema
 CREATE SCHEMA IF NOT EXISTS piedrazul AUTHORIZATION piedrazul_admin;
@@ -171,3 +173,26 @@ ON appointments (
     appointment_date,
     start_time
 );
+
+INSERT INTO specialties (name)
+VALUES
+('Médico'),
+('Terapeuta');
+
+INSERT INTO roles (name)
+VALUES
+('ADMIN'),
+('PATIENT'),
+('PROFESSIONAL'),
+('SCHEDULER');
+
+-- Selects
+SELECT * FROM piedrazul.roles;
+SELECT * FROM piedrazul.users;
+SELECT * FROM piedrazul.user_roles;
+SELECT * FROM piedrazul.specialties;
+SELECT * FROM piedrazul.professionals;
+SELECT * FROM piedrazul.patients;
+SELECT * FROM piedrazul.system_settings;
+SELECT * FROM piedrazul.weekly_availability;
+SELECT * FROM piedrazul.appointments;
