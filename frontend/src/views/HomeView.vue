@@ -1,16 +1,16 @@
 <script setup>
 import { useAuth } from '@/composables/useAuth'
 
-const { user, isAuthenticated, canManage, hasAnyRole } = useAuth()
+const { user, isAuthenticated, canManage, canManagePatients, hasAnyRole } = useAuth()
 </script>
 
 <template>
   <div class="home-container">
     <section class="hero-card">
-      <h1 class="hero-title">Sistema de Gestion de Citas Medicas</h1>
+      <h1 class="hero-title">Sistema de Gestión de Citas Médicas</h1>
       <p class="hero-subtitle">
-        Plataforma unificada para la administracion de especialidades, profesionales y citas medicas
-        con autenticacion segura.
+        Plataforma unificada para la administración de especialidades, profesionales y citas médicas
+        con autenticación segura.
       </p>
 
       <div v-if="isAuthenticated" class="welcome-banner">
@@ -21,13 +21,16 @@ const { user, isAuthenticated, canManage, hasAnyRole } = useAuth()
 
       <div class="action-buttons">
         <router-link v-if="!isAuthenticated" to="/login" class="btn btn-primary">
-          Iniciar Sesion
+          Iniciar Sesión
         </router-link>
         <router-link v-if="!isAuthenticated" to="/register" class="btn btn-secondary">
           Registrarse
         </router-link>
         <router-link v-if="isAuthenticated" to="/appointments" class="btn btn-primary">
           Gestionar Citas
+        </router-link>
+        <router-link v-if="isAuthenticated && canManagePatients" to="/patients" class="btn btn-secondary">
+          Gestión de Pacientes
         </router-link>
         <router-link v-if="isAuthenticated && hasAnyRole(['ADMIN', 'SCHEDULER', 'PROFESSIONAL'])" to="/scheduling" class="btn btn-secondary">
           Horarios y Franjas
