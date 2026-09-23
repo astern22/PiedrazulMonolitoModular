@@ -151,7 +151,7 @@ onMounted(() => {
       <!-- Sección Izquierda: Configurar Disponibilidad Semanal -->
       <div class="column">
         <div class="card">
-          <h3>➕ Registrar Horario Semanal</h3>
+          <h3>Registrar Horario Semanal</h3>
           <p class="section-desc">
             Define los días y rangos en los que el profesional atiende consultas.
           </p>
@@ -270,7 +270,7 @@ onMounted(() => {
       <!-- Sección Derecha: Consulta en Tiempo Real de Franjas Libres -->
       <div class="column">
         <div class="card">
-          <h3>🔎 Consultar Franjas Horarias Disponibles</h3>
+          <h3>Consultar Franjas Horarias Disponibles</h3>
           <p class="section-desc">
             Calcula dinámicamente los intervalos libres para citas según la duración asignada y citas existentes.
           </p>

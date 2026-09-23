@@ -196,7 +196,7 @@ onMounted(() => {
           {{ showCreateForm ? 'Cancelar' : 'Agendar Cita' }}
         </button>
         <button @click="fetchAppointments" class="btn btn-outline" :disabled="isLoading">
-          🔄 Refrescar
+          Refrescar
         </button>
       </div>
     </div>
@@ -328,7 +328,7 @@ onMounted(() => {
         </div>
         <div class="filter-buttons">
           <button type="submit" class="btn btn-primary" :disabled="isLoading">
-            🔍 Buscar
+            Buscar
           </button>
           <button
             type="button"
