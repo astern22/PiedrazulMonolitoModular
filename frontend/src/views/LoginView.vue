@@ -40,7 +40,7 @@ async function handleSubmit() {
   <div class="auth-container">
     <div class="auth-card">
       <div class="auth-header">
-        <div class="auth-icon">🔐</div>
+        <div class="auth-icon"></div>
         <h2>Iniciar Sesion</h2>
         <p>Ingresa tus credenciales para acceder a Piedrazul</p>
       </div>

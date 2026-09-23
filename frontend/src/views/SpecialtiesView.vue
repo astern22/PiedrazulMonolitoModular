@@ -56,7 +56,7 @@ onMounted(() => {
         <p>Consulta y registro de especialidades disponibles en Piedrazul</p>
       </div>
       <button @click="fetchSpecialties" class="btn btn-outline" :disabled="isLoading">
-        🔄 Refrescar
+        Refrescar
       </button>
     </div>
 
