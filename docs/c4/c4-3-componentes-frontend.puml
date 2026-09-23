@@ -1,0 +1,66 @@
+' C4 Model - Nivel 3: Diagrama de Componentes
+' Contenedor: SPA Web Piedrazul
+' Muestra los componentes de la aplicacion frontend
+@startuml C4_Componentes_Frontend_Piedrazul
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title C4 Model - Nivel 3: Componentes del contenedor SPA Web Piedrazul
+
+Container_Boundary(spa, "SPA Web Piedrazul", "Vue 3 + Vite") {
+
+    Component(app, "App.vue", "Vue 3 SFC", "Componente raiz: layout, barra de navegacion con enrutado, indicador de usuario autenticado y cierre de sesion.")
+    Component(router, "Router (vue-router)", "Vue Router", "Define las rutas de la SPA, asigna títulos y ejecuta guardas globales (requiresAuth y requiresGuest).")
+    Component(composable, "useAuth (composable)", "Vue Composition API", "Estado reactivo de autenticacion: login, registro, logout e isAuthenticated. Reacciona al evento auth:unauthorized.")
+
+    Component(viewHome, "HomeView", "Vue 3 SFC", "Pagina de inicio del sistema.")
+    Component(viewLogin, "LoginView", "Vue 3 SFC", "Formulario de inicio de sesion.")
+    Component(viewRegister, "RegisterView", "Vue 3 SFC", "Formulario de registro de nuevos usuarios.")
+    Component(viewSpecialties, "SpecialtiesView", "Vue 3 SFC", "Catalogo de especialidades medicas.")
+    Component(viewProfessionals, "ProfessionalsView", "Vue 3 SFC", "Gestion y consulta de profesionales de la salud.")
+    Component(viewScheduling, "SchedulingView", "Vue 3 SFC", "Gestion de disponibilidad semanal y franjas horarias.")
+    Component(viewAppointments, "AppointmentsView", "Vue 3 SFC", "Gestion de citas medicas: crear, consultar y filtrar.")
+
+    Component(axiosClient, "Cliente HTTP (Axios)", "Axios", "Instancia de axios con baseURL configurable, interceptor de peticion que adjunta el JWT almacenado e interceptor de respuesta que normaliza errores y limpia la sesion ante 401.")
+    Component(authSvc, "authService", "JavaScript", "Consume /auth/login y /auth/register; gestiona token, isAuthenticated y getCurrentUser.")
+    Component(specialtySvc, "specialtyService", "JavaScript", "Consume /api/specialties.")
+    Component(professionalSvc, "professionalService", "JavaScript", "Consume /api/professionals.")
+    Component(schedulingSvc, "schedulingService", "JavaScript", "Consume /api/availability (disponibilidad semanal y franjas libres).")
+    Component(appointmentSvc, "appointmentService", "JavaScript", "Consume /api/appointments.")
+
+}
+
+Container(api, "API REST Piedrazul", "Java 21, Spring Boot", "Backend monolito modular que expone los endpoints REST consumidos por la SPA.", $tags="+api")
+
+Rel(spa, app, "Monta la aplicacion")
+Rel(spa, router, "Instala el router de navegacion")
+Rel(app, router, "Navega entre vistas")
+Rel(app, composable, "Usa el estado de autenticacion")
+Rel(router, composable, "Ejecuta guardas de autenticacion (isAuthenticated)")
+Rel(app, viewHome, "Renderiza la pagina de inicio")
+Rel(app, viewLogin, "Renderiza el login", "pagina /login")
+Rel(app, viewRegister, "Renderiza el registro", "pagina /register")
+Rel(app, viewSpecialties, "Renderiza especialidades", "pagina /specialties")
+Rel(app, viewProfessionals, "Renderiza profesionales", "pagina /professionals")
+Rel(app, viewScheduling, "Renderiza horarios", "pagina /scheduling")
+Rel(app, viewAppointments, "Renderiza citas", "pagina /appointments")
+
+Rel(viewLogin, authSvc, "Llamada de autenticacion")
+Rel(viewRegister, authSvc, "Llamada de registro")
+Rel(viewSpecialties, specialtySvc, "Consulta el catalogo de especialidades")
+Rel(viewProfessionals, professionalSvc, "Consulta y registra profesionales")
+Rel(viewScheduling, schedulingSvc, "Gestiona disponibilidad y franjas")
+Rel(viewAppointments, appointmentSvc, "Gestiona citas medicas")
+
+Rel(authSvc, axiosClient, "Usa el cliente HTTP")
+Rel(specialtySvc, axiosClient, "Usa el cliente HTTP")
+Rel(professionalSvc, axiosClient, "Usa el cliente HTTP")
+Rel(schedulingSvc, axiosClient, "Usa el cliente HTTP")
+Rel(appointmentSvc, axiosClient, "Usa el cliente HTTP")
+Rel(composable, authSvc, "Delega login, registro y sesion")
+
+Rel(axiosClient, api, "Peticiones HTTP/JSON con Authorization: Bearer JWT", "HTTP/JSON")
+
+SHOW_LEGEND()
+LAYOUT_WITH_LEGEND()
+
+@enduml

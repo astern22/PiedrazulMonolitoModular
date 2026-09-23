@@ -1,0 +1,47 @@
+' C4 Model - Nivel 3: Diagrama de Componentes
+' Contenedor: Base de Datos Piedrazul
+' Muestra las tablas del esquema piedrazul como componentes
+@startuml C4_Componentes_BaseDeDatos_Piedrazul
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title C4 Model - Nivel 3: Componentes del contenedor Base de Datos Piedrazul
+
+Container_Boundary(db, "Base de Datos Piedrazul", "PostgreSQL (esquema piedrazul)") {
+
+    Component(t_users, "users", "Tabla", "Usuarios del sistema: username, password (BCrypt), full_name, email, enabled, created_at.")
+    Component(t_roles, "roles", "Tabla", "Roles: ADMIN, PATIENT, PROFESSIONAL, SCHEDULER.")
+    Component(t_user_roles, "user_roles", "Tabla (N:M)", "Relacion muchos-a-muchos entre users y roles.")
+    Component(t_specialties, "specialties", "Tabla", "Catalogo de especialidades medicas.")
+    Component(t_professionals, "professionals", "Tabla", "Profesionales de la salud vinculados a un usuario y una especialidad (con appointment_interval_minutes y active).")
+    Component(t_patients, "patients", "Tabla", "Pacientes vinculados a un usuario (document_number, phone, birth_date).")
+    Component(t_settings, "system_settings", "Tabla", "Parametros del sistema (booking_window_weeks).")
+    Component(t_availability, "weekly_availability", "Tabla", "Disponibilidad semanal de cada profesional (day_of_week, start_time, end_time, active).")
+    Component(t_appointments, "appointments", "Tabla", "Citas medicas reservadas (patient_id, professional_id, appointment_date, start_time, end_time, status, created_at). Indice unico uk_professional_slot contra doble reserva.")
+
+}
+
+Container(api, "API REST Piedrazul", "Java 21, Spring Boot", "Accede a la base de datos por JDBC/JPA (Hibernate).", $tags="+api")
+
+Rel(t_users, t_user_roles, "1..n", "FK fk_user_roles_user")
+Rel(t_roles, t_user_roles, "1..n", "FK fk_user_roles_role")
+
+Rel(t_users, t_professionals, "1 a 1", "FK fk_professional_user")
+Rel(t_users, t_patients, "1 a 1", "FK fk_patient_user")
+Rel(t_specialties, t_professionals, "1..n", "FK fk_professional_specialty")
+
+Rel(t_professionals, t_availability, "1..n", "FK fk_availability_professional")
+Rel(t_patients, t_appointments, "1..n", "FK fk_appointment_patient")
+Rel(t_professionals, t_appointments, "1..n", "FK fk_appointment_professional")
+
+Rel(api, t_users, "CRUD via JPA", "JDBC")
+Rel(api, t_roles, "Lectura via JPA", "JDBC")
+Rel(api, t_user_roles, "Escritura via JPA (UserEntity.roles)", "JDBC")
+Rel(api, t_specialties, "CRUD via JPA", "JDBC")
+Rel(api, t_professionals, "CRUD via JPA", "JDBC")
+Rel(api, t_availability, "CRUD via JPA", "JDBC")
+Rel(api, t_appointments, "CRUD via JPA", "JDBC")
+
+SHOW_LEGEND()
+LAYOUT_WITH_LEGEND()
+
+@enduml

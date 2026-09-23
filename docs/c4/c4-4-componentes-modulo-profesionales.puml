@@ -1,0 +1,54 @@
+' C4 Model - Nivel 3: Diagrama de Componentes
+' Componente: Modulo de Profesionales y Especialidades (contendor API REST)
+' Estructura interna por capas (presentation, application, domain, infrastructure)
+@startuml C4_Componentes_Modulo_Profesionales_Piedrazul
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title C4 Model - Nivel 3: Componentes del Modulo de Profesionales y Especialidades
+
+Container_Boundary(api, "API REST Piedrazul") {
+
+    Component(profController, "ProfessionalController", "Spring MVC", "REST /api/professionals. CRUD: crear, listar, activos, por id y por especialidad.", $tags="presentation")
+    Component(specController, "SpecialtyController", "Spring MVC", "REST /api/specialties. Lista y crea especialidades medicas.", $tags="presentation")
+    Component(profDto, "ProfessionalRequest / ProfessionalResponse", "Java record", "DTOs de entrada y salida del profesional.")
+    Component(specDto, "SpecialtyRequest / SpecialtyResponse", "Java record", "DTOs de entrada y salida de la especialidad.")
+
+    Component(profSvc, "ProfessionalService", "Spring @Service", "Reglas de negocio del profesional: valida unicidad por usuario, crea profesional activo y consulta por especialidad.")
+    Component(specSvc, "SpecialtyService", "Spring @Service", "Reglas de negocio de especialidad: evita duplicados por nombre (case-insensitive).")
+
+    Component(prof, "Professional", "Clase de dominio", "Entidad de dominio del profesional (userId, specialtyId, professionalType, appointmentIntervalMinutes, active).")
+    Component(spec, "Specialty", "Clase de dominio", "Entidad de dominio de la especialidad (id, name).")
+
+    Component(profEntity, "ProfessionalEntity", "JPA @Entity", "Tabla professionals.")
+    Component(specEntity, "SpecialtyEntity", "JPA @Entity", "Tabla specialties.")
+    Component(profRepo, "ProfessionalRepository", "Spring Data JPA", "Acceso a professionals: findByActiveTrue, findBySpecialtyId, existsByUserId.")
+    Component(specRepo, "SpecialtyRepository", "Spring Data JPA", "Acceso a specialties: existsByNameIgnoreCase.")
+
+}
+
+Component(mod_users, "Modulo de Autenticacion y Usuarios", "Spring Beans", "Provee el id de usuario registrado (userId) del profesional.")
+Component(db, "Base de Datos Piedrazul", "PostgreSQL", "Esquema piedrazul, tablas specialties y professionals.")
+
+Rel(profController, profDto, "Recibe y construye los DTO del profesional")
+Rel(profController, profSvc, "Delega las operaciones de negocio")
+Rel(specController, specDto, "Recibe y construye los DTO de especialidad")
+Rel(specController, specSvc, "Delega las operaciones de negocio")
+
+Rel(profSvc, profEntity, "Construye y persiste el profesional")
+Rel(profSvc, profRepo, "Valida unicidad por usuario y consulta")
+Rel(specSvc, specEntity, "Construye y persiste la especialidad")
+Rel(specSvc, specRepo, "Valida duplicados por nombre")
+
+Rel(profEntity, profRepo, "Mapeado por JPA")
+Rel(specEntity, specRepo, "Mapeado por JPA")
+Rel(profRepo, db, "SELECT/INSERT via JDBC", "JDBC")
+Rel(specRepo, db, "SELECT/INSERT via JDBC", "JDBC")
+
+Rel_Back(prof, profEntity, "Modela el agregado de dominio")
+Rel_Back(spec, specEntity, "Modela el agregado de dominio")
+Rel(profSvc, mod_users, "Enlaza el userId de un usuario existente", "Spring Beans")
+
+SHOW_LEGEND()
+LAYOUT_WITH_LEGEND()
+
+@enduml
