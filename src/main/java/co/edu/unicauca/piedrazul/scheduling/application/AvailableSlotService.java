@@ -41,7 +41,7 @@ public class AvailableSlotService {
                                 new RuntimeException("Profesional no encontrado"));
 
         if (!Boolean.TRUE.equals(professional.getActive())) {
-            throw new RuntimeException("El profesional no está activo");
+            throw new RuntimeException("El profesional no esta activo");
         }
 
         int dayOfWeek = date.getDayOfWeek().getValue();

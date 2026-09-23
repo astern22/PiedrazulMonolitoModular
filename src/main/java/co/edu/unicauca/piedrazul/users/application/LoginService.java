@@ -6,6 +6,8 @@ import co.edu.unicauca.piedrazul.users.infrastructure.persistence.UserRepository
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class LoginService {
     private final UserRepository repository;
@@ -44,8 +46,14 @@ public class LoginService {
             );
         }
 
+        List<String> roles = user.getRoles()
+                .stream()
+                .map(role -> role.getName())
+                .toList();
+
         return jwtService.generateToken(
-                user.getUsername()
+                user.getUsername(),
+                roles
         );
     }
 }
