@@ -6,6 +6,8 @@ import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
 import SpecialtiesView from '@/views/SpecialtiesView.vue'
 import AppointmentsView from '@/views/AppointmentsView.vue'
+import ProfessionalsView from '@/views/ProfessionalsView.vue'
+import SchedulingView from '@/views/SchedulingView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -20,7 +22,7 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: LoginView,
-      meta: { requiresGuest: true, title: 'Iniciar Sesion - Piedrazul' },
+      meta: { requiresGuest: true, title: 'Iniciar Sesión - Piedrazul' },
     },
     {
       path: '/register',
@@ -35,10 +37,22 @@ const router = createRouter({
       meta: { requiresAuth: true, title: 'Especialidades - Piedrazul' },
     },
     {
+      path: '/professionals',
+      name: 'professionals',
+      component: ProfessionalsView,
+      meta: { requiresAuth: true, title: 'Profesionales - Piedrazul' },
+    },
+    {
+      path: '/scheduling',
+      name: 'scheduling',
+      component: SchedulingView,
+      meta: { requiresAuth: true, title: 'Disponibilidad y Horarios - Piedrazul' },
+    },
+    {
       path: '/appointments',
       name: 'appointments',
       component: AppointmentsView,
-      meta: { requiresAuth: true, title: 'Citas Medicas - Piedrazul' },
+      meta: { requiresAuth: true, title: 'Citas Médicas - Piedrazul' },
     },
     {
       path: '/:pathMatch(.*)*',

@@ -1,13 +1,19 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { appointmentService } from '@/api'
+import { ref, onMounted, watch } from 'vue'
+import { appointmentService, schedulingService, professionalService } from '@/api'
 
 const appointments = ref([])
+const professionals = ref([])
 const isLoading = ref(false)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const showCreateForm = ref(false)
+
+// Franjas de horario disponibles
+const availableSlots = ref([])
+const isLoadingSlots = ref(false)
+const selectedSlotIndex = ref(null)
 
 // Formulario de nueva cita
 const form = ref({
@@ -18,11 +24,19 @@ const form = ref({
   endTime: '08:30',
 })
 
-// Filtros de busqueda
+// Filtros de búsqueda
 const filter = ref({
   professionalId: '',
   date: '',
 })
+
+async function loadProfessionals() {
+  try {
+    professionals.value = await professionalService.getActive()
+  } catch (error) {
+    console.error('Error al cargar lista de profesionales:', error)
+  }
+}
 
 async function fetchAppointments() {
   isLoading.value = true
@@ -30,10 +44,48 @@ async function fetchAppointments() {
   try {
     appointments.value = await appointmentService.getAll()
   } catch (error) {
-    errorMessage.value = error.message || 'Error al cargar las citas medicas.'
+    errorMessage.value = error.message || 'Error al cargar las citas médicas.'
   } finally {
     isLoading.value = false
   }
+}
+
+async function fetchAvailableSlots() {
+  if (!form.value.professionalId || !form.value.appointmentDate) {
+    availableSlots.value = []
+    selectedSlotIndex.value = null
+    return
+  }
+
+  isLoadingSlots.value = true
+  selectedSlotIndex.value = null
+  try {
+    const slots = await schedulingService.getAvailableSlots(
+      form.value.professionalId,
+      form.value.appointmentDate
+    )
+    availableSlots.value = slots || []
+  } catch (error) {
+    console.error('Error al obtener franjas horarias:', error)
+    availableSlots.value = []
+  } finally {
+    isLoadingSlots.value = false
+  }
+}
+
+watch(
+  () => [form.value.professionalId, form.value.appointmentDate],
+  () => {
+    if (showCreateForm.value) {
+      fetchAvailableSlots()
+    }
+  }
+)
+
+function selectSlot(slot, index) {
+  selectedSlotIndex.value = index
+  form.value.startTime = slot.startTime.substring(0, 5)
+  form.value.endTime = slot.endTime.substring(0, 5)
 }
 
 async function handleSearch() {
@@ -87,7 +139,7 @@ async function handleCreate() {
       endTime: form.value.endTime,
     })
 
-    successMessage.value = `¡Cita medica #${created.id} agendada correctamente!`
+    successMessage.value = `¡Cita médica #${created.id} agendada correctamente!`
     form.value = {
       patientId: '',
       professionalId: '',
@@ -95,17 +147,19 @@ async function handleCreate() {
       startTime: '08:00',
       endTime: '08:30',
     }
+    availableSlots.value = []
+    selectedSlotIndex.value = null
     showCreateForm.value = false
     await fetchAppointments()
   } catch (error) {
-    errorMessage.value = error.message || 'No se pudo crear la cita medica.'
+    errorMessage.value = error.message || 'No se pudo crear la cita médica.'
   } finally {
     isSubmitting.value = false
   }
 }
 
 async function handleDelete(id) {
-  if (!confirm(`¿Estas seguro de que deseas cancelar la cita #${id}?`)) {
+  if (!confirm(`¿Estás seguro de que deseas cancelar la cita #${id}?`)) {
     return
   }
 
@@ -121,6 +175,7 @@ async function handleDelete(id) {
 }
 
 onMounted(() => {
+  loadProfessionals()
   fetchAppointments()
 })
 </script>
@@ -129,8 +184,8 @@ onMounted(() => {
   <div class="view-container">
     <div class="page-header">
       <div>
-        <h1>Gestion de Citas Medicas</h1>
-        <p>Agendamiento, busqueda y administracion de citas de la entidad de salud</p>
+        <h1>Gestión de Citas Médicas</h1>
+        <p>Agendamiento, búsqueda y administración de citas de la entidad de salud</p>
       </div>
       <div class="header-actions">
         <button
@@ -156,66 +211,96 @@ onMounted(() => {
 
     <!-- Formulario para agendar cita (Colapsable) -->
     <div v-if="showCreateForm" class="card create-card">
-      <h3>Agendar Nueva Cita Medica</h3>
-      <form @submit.prevent="handleCreate" class="form-grid">
-        <div class="form-group">
-          <label for="patientId">ID del Paciente</label>
-          <input
-            id="patientId"
-            v-model="form.patientId"
-            type="number"
-            placeholder="ej. 1"
-            required
-            :disabled="isSubmitting"
-          />
+      <h3>Agendar Nueva Cita Médica</h3>
+      <form @submit.prevent="handleCreate">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="patientId">ID del Paciente</label>
+            <input
+              id="patientId"
+              v-model="form.patientId"
+              type="number"
+              placeholder="ej. 1"
+              required
+              :disabled="isSubmitting"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="professionalId">Profesional</label>
+            <select
+              id="professionalId"
+              v-model="form.professionalId"
+              required
+              :disabled="isSubmitting"
+            >
+              <option value="" disabled>Selecciona profesional</option>
+              <option v-for="prof in professionals" :key="prof.id" :value="prof.id">
+                Dr(a). ID #{{ prof.id }} ({{ prof.professionalType }})
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="appointmentDate">Fecha</label>
+            <input
+              id="appointmentDate"
+              v-model="form.appointmentDate"
+              type="date"
+              required
+              :disabled="isSubmitting"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="startTime">Hora Inicio</label>
+            <input
+              id="startTime"
+              v-model="form.startTime"
+              type="time"
+              required
+              :disabled="isSubmitting"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="endTime">Hora Fin</label>
+            <input
+              id="endTime"
+              v-model="form.endTime"
+              type="time"
+              required
+              :disabled="isSubmitting"
+            />
+          </div>
         </div>
 
-        <div class="form-group">
-          <label for="professionalId">ID del Profesional</label>
-          <input
-            id="professionalId"
-            v-model="form.professionalId"
-            type="number"
-            placeholder="ej. 2"
-            required
-            :disabled="isSubmitting"
-          />
+        <!-- Franjas horarias disponibles calculadas por scheduling/AvailableSlotService -->
+        <div v-if="form.professionalId && form.appointmentDate" class="slots-section">
+          <label class="slots-label">
+            ✨ Franjas Horarias Disponibles (Calculadas por el sistema):
+          </label>
+          <div v-if="isLoadingSlots" class="slots-loading">
+            <span class="spinner-sm"></span> Calculando franjas libres...
+          </div>
+          <div v-else-if="availableSlots.length === 0" class="no-slots">
+            No se encontraron franjas libres para este día. Puedes ingresar el horario manualmente arriba.
+          </div>
+          <div v-else class="slots-container">
+            <button
+              type="button"
+              v-for="(slot, idx) in availableSlots"
+              :key="idx"
+              @click="selectSlot(slot, idx)"
+              class="slot-chip"
+              :class="{ 'slot-selected': selectedSlotIndex === idx }"
+            >
+              🕒 {{ slot.startTime.substring(0, 5) }} - {{ slot.endTime.substring(0, 5) }}
+            </button>
+          </div>
         </div>
 
-        <div class="form-group">
-          <label for="appointmentDate">Fecha</label>
-          <input
-            id="appointmentDate"
-            v-model="form.appointmentDate"
-            type="date"
-            required
-            :disabled="isSubmitting"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="startTime">Hora Inicio</label>
-          <input
-            id="startTime"
-            v-model="form.startTime"
-            type="time"
-            required
-            :disabled="isSubmitting"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="endTime">Hora Fin</label>
-          <input
-            id="endTime"
-            v-model="form.endTime"
-            type="time"
-            required
-            :disabled="isSubmitting"
-          />
-        </div>
-
-        <div class="form-actions">
+        <div class="form-actions mt-3">
           <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
             <span v-if="isSubmitting" class="spinner"></span>
             <span v-else>Guardar Cita</span>
@@ -224,7 +309,7 @@ onMounted(() => {
       </form>
     </div>
 
-    <!-- Barra de busqueda y filtros -->
+    <!-- Barra de búsqueda y filtros -->
     <div class="card filter-card">
       <h4>Filtrar Citas por Profesional y Fecha</h4>
       <form @submit.prevent="handleSearch" class="filter-form">
@@ -260,16 +345,16 @@ onMounted(() => {
     <!-- Tabla de Citas -->
     <div class="card table-card">
       <div class="table-header">
-        <h3>Citas Medicas ({{ appointments.length }})</h3>
+        <h3>Citas Médicas ({{ appointments.length }})</h3>
       </div>
 
       <div v-if="isLoading" class="loading-state">
         <div class="spinner-large"></div>
-        <p>Cargando citas medicas...</p>
+        <p>Cargando citas médicas...</p>
       </div>
 
       <div v-else-if="appointments.length === 0" class="empty-state">
-        <p>No se encontraron citas medicas registradas con los criterios seleccionados.</p>
+        <p>No se encontraron citas médicas registradas con los criterios seleccionados.</p>
       </div>
 
       <div v-else class="table-responsive">
@@ -385,6 +470,64 @@ onMounted(() => {
   align-items: flex-end;
 }
 
+.mt-3 {
+  margin-top: 1rem;
+}
+
+.slots-section {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px dashed #cbd5e1;
+}
+
+.slots-label {
+  display: block;
+  font-size: 0.825rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 0.6rem;
+}
+
+.slots-loading,
+.no-slots {
+  font-size: 0.85rem;
+  color: #64748b;
+  padding: 0.5rem 0;
+}
+
+.slots-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.slot-chip {
+  background: white;
+  border: 1px solid #93c5fd;
+  color: #1d4ed8;
+  padding: 0.4rem 0.8rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.slot-chip:hover {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  transform: translateY(-1px);
+}
+
+.slot-selected {
+  background: #2563eb !important;
+  color: white !important;
+  border-color: #1d4ed8 !important;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+}
+
 .filter-form {
   display: flex;
   gap: 1rem;
@@ -412,15 +555,18 @@ onMounted(() => {
   color: #334155;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
   padding: 0.65rem 0.85rem;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   font-size: 0.9rem;
   outline: none;
+  background: white;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
@@ -582,6 +728,17 @@ onMounted(() => {
   animation: spin 0.6s linear infinite;
 }
 
+.spinner-sm {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #2563eb;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: middle;
+}
+
 .spinner-large {
   width: 32px;
   height: 32px;
@@ -598,4 +755,3 @@ onMounted(() => {
   }
 }
 </style>
-
