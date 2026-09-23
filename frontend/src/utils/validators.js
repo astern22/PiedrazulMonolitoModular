@@ -98,6 +98,17 @@ export function isFutureOrToday(value) {
   return null
 }
 
+export function isPastDate(value, fieldName = 'La fecha') {
+  if (!value) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const date = new Date(value + 'T00:00:00')
+  if (date >= today) {
+    return `${fieldName} debe ser anterior a hoy.`
+  }
+  return null
+}
+
 export function isTimeRangeValid(startTime, endTime) {
   if (!startTime || !endTime) return null
   const start = startTime.substring(0, 5)
@@ -274,6 +285,37 @@ export function validateAppointmentForm({
       required(endTime, 'La hora de fin'),
       isTime(endTime),
       isTimeRangeValid(startTime, endTime)
+    ),
+  })
+}
+
+/**
+ * Validación de PatientRequest.
+ * DB: document_number VARCHAR(20) NOT NULL UNIQUE, phone VARCHAR(20), birth_date DATE, user_id BIGINT UNIQUE
+ */
+export function validatePatientForm({
+  documentNumber,
+  phone,
+  birthDate,
+  userId,
+}) {
+  return validateFields({
+    documentNumber: firstError(
+      required(documentNumber, 'El número de documento'),
+      noSpaces(documentNumber, 'El número de documento'),
+      maxLength(documentNumber, 20, 'El número de documento')
+    ),
+    phone: firstError(
+      maxLength(phone, 20, 'El teléfono')
+    ),
+    birthDate: firstError(
+      birthDate ? isDate(birthDate) : null,
+      birthDate ? isPastDate(birthDate, 'La fecha de nacimiento') : null
+    ),
+    userId: firstError(
+      userId !== '' && userId !== null && userId !== undefined
+        ? isPositiveInteger(userId, 'El ID de usuario')
+        : null
     ),
   })
 }

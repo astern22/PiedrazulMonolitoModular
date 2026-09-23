@@ -30,6 +30,8 @@ export function useAuth() {
   const isPatient = computed(() => roles.value.includes('PATIENT'))
   const isProfessional = computed(() => roles.value.includes('PROFESSIONAL'))
   const isScheduler = computed(() => roles.value.includes('SCHEDULER'))
+  const isDoctor = computed(() => roles.value.includes('PROFESSIONAL') || roles.value.includes('MEDICO'))
+  const canManagePatients = computed(() => isDoctor.value || isAdmin.value)
 
   /**
    * Verifica si el usuario tiene un rol especifico.
@@ -91,7 +93,9 @@ export function useAuth() {
     isPatient,
     isProfessional,
     isScheduler,
+    isDoctor,
     canManage,
+    canManagePatients,
     hasRole,
     hasAnyRole,
     login,

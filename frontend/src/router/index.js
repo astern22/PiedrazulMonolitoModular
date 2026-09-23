@@ -8,6 +8,7 @@ import SpecialtiesView from '@/views/SpecialtiesView.vue'
 import AppointmentsView from '@/views/AppointmentsView.vue'
 import ProfessionalsView from '@/views/ProfessionalsView.vue'
 import SchedulingView from '@/views/SchedulingView.vue'
+import PatientsView from '@/views/PatientsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -17,6 +18,16 @@ const router = createRouter({
       name: 'home',
       component: HomeView,
       meta: { title: 'Inicio - Piedrazul' },
+    },
+    {
+      path: '/patients',
+      name: 'patients',
+      component: PatientsView,
+      meta: {
+        requiresAuth: true,
+        roles: ['PROFESSIONAL', 'MEDICO', 'ADMIN'],
+        title: 'Gestión de Pacientes - Piedrazul',
+      },
     },
     {
       path: '/login',
