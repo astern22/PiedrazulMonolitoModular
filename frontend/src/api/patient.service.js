@@ -1,7 +1,7 @@
 import apiClient from './client.js'
 
 /**
- * Servicio para la gestión de Pacientes (/api/patients)
+ * Servicio para la gestion de Pacientes (/api/patients)
  * Corresponde a PatientController
  */
 export const patientService = {
@@ -11,6 +11,15 @@ export const patientService = {
    */
   async getAll() {
     const response = await apiClient.get('/api/patients')
+    return response.data
+  },
+
+  /**
+   * Obtiene el paciente vinculado al usuario actualmente autenticado.
+   * @returns {Promise<Object>}
+   */
+  async getMe() {
+    const response = await apiClient.get('/api/patients/me')
     return response.data
   },
 
@@ -25,7 +34,7 @@ export const patientService = {
   },
 
   /**
-   * Busca un paciente por su número de documento.
+   * Busca un paciente por su numero de documento.
    * @param {string} documentNumber
    * @returns {Promise<Object>}
    */
@@ -37,8 +46,8 @@ export const patientService = {
   /**
    * Registra un nuevo paciente en el sistema.
    * @param {Object} data
-   * @param {string} data.documentNumber - Número de documento
-   * @param {string} [data.phone] - Teléfono de contacto
+   * @param {string} data.documentNumber - Numero de documento
+   * @param {string} [data.phone] - Telefono de contacto
    * @param {string} [data.birthDate] - Fecha de nacimiento (YYYY-MM-DD)
    * @param {number} [data.userId] - ID del usuario del sistema (opcional)
    * @returns {Promise<Object>}
@@ -55,7 +64,7 @@ export const patientService = {
   },
 
   /**
-   * Actualiza la información de un paciente existente.
+   * Actualiza la informacion de un paciente existente.
    * @param {number|string} id - ID del paciente a actualizar
    * @param {Object} data
    * @param {string} data.documentNumber

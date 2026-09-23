@@ -120,10 +120,10 @@ async function handleSubmit() {
   try {
     if (editingId.value) {
       await patientService.update(editingId.value, form.value)
-      successMessage.value = `¡Paciente #${editingId.value} actualizado con éxito!`
+      successMessage.value = `¡Paciente #${editingId.value} actualizado con exito!`
     } else {
       const created = await patientService.create(form.value)
-      successMessage.value = `¡Paciente #${created.id} registrado con éxito!`
+      successMessage.value = `¡Paciente #${created.id} registrado con exito!`
     }
     cancelForm()
     await fetchPatients()
@@ -135,7 +135,7 @@ async function handleSubmit() {
 }
 
 async function handleDelete(id) {
-  if (!confirm(`¿Estás seguro de que deseas eliminar al paciente #${id}?`)) {
+  if (!confirm(`¿Estas seguro de que deseas eliminar al paciente #${id}?`)) {
     return
   }
 
@@ -159,9 +159,9 @@ onMounted(() => {
   <div class="view-container">
     <div class="page-header">
       <div>
-        <div class="header-badge">Módulo Médico</div>
-        <h1>Gestión de Pacientes</h1>
-        <p>Administración y registro de la información clínica y personal de los pacientes</p>
+        <div class="header-badge">Modulo Medico</div>
+        <h1>Gestion de Pacientes</h1>
+        <p>Administracion y registro de la informacion clinica y personal de los pacientes</p>
       </div>
       <div class="header-actions">
         <button
@@ -196,7 +196,7 @@ onMounted(() => {
       <form @submit.prevent="handleSubmit" novalidate>
         <div class="form-grid">
           <div class="form-group">
-            <label for="docNumber">Número de Documento *</label>
+            <label for="docNumber">Numero de Documento *</label>
             <input
               id="docNumber"
               v-model="form.documentNumber"
@@ -208,7 +208,7 @@ onMounted(() => {
           </div>
 
           <div class="form-group">
-            <label for="patientPhone">Teléfono de Contacto</label>
+            <label for="patientPhone">Telefono de Contacto</label>
             <input
               id="patientPhone"
               v-model="form.phone"
@@ -255,7 +255,7 @@ onMounted(() => {
       </form>
     </div>
 
-    <!-- Barra de Búsqueda -->
+    <!-- Barra de Busqueda -->
     <div class="card search-card">
       <div class="search-box">
         <label for="searchInput" class="search-label">Buscar Pacientes</label>
@@ -264,14 +264,14 @@ onMounted(() => {
             id="searchInput"
             v-model="searchQuery"
             type="text"
-            placeholder="Buscar por cédula, nombre, teléfono o ID..."
+            placeholder="Buscar por cedula, nombre, telefono o ID..."
             class="search-input"
           />
           <button
             v-if="searchQuery"
             @click="searchQuery = ''"
             class="btn-clear-search"
-            title="Limpiar búsqueda"
+            title="Limpiar busqueda"
           >
             &times;
           </button>
@@ -289,7 +289,7 @@ onMounted(() => {
 
       <div v-if="isLoading" class="loading-state">
         <div class="spinner-large"></div>
-        <p>Cargando información de pacientes...</p>
+        <p>Cargando informacion de pacientes...</p>
       </div>
 
       <div v-else-if="filteredPatients.length === 0" class="empty-state">
@@ -304,7 +304,7 @@ onMounted(() => {
               <th style="width: 70px">ID</th>
               <th>Documento</th>
               <th>Nombre / Usuario</th>
-              <th>Teléfono</th>
+              <th>Telefono</th>
               <th>F. Nacimiento</th>
               <th>Edad</th>
               <th style="text-align: right">Acciones</th>
@@ -343,7 +343,7 @@ onMounted(() => {
                     v-if="canManagePatients"
                     @click="startEdit(patient)"
                     class="btn-action btn-edit"
-                    title="Editar información"
+                    title="Editar informacion"
                   >
                     Editar
                   </button>

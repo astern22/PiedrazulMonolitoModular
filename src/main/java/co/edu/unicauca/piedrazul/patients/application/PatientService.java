@@ -25,7 +25,7 @@ public class PatientService {
 
     public PatientResponse create(PatientRequest request) {
         if (patientRepository.existsByDocumentNumber(request.documentNumber())) {
-            throw new RuntimeException("El número de documento ya está registrado");
+            throw new RuntimeException("El numero de documento ya esta registrado");
         }
 
         if (request.userId() != null) {
@@ -33,7 +33,7 @@ public class PatientService {
                 throw new RuntimeException("El usuario con ID " + request.userId() + " no existe");
             }
             if (patientRepository.existsByUserId(request.userId())) {
-                throw new RuntimeException("El usuario ya está registrado como paciente");
+                throw new RuntimeException("El usuario ya esta registrado como paciente");
             }
         }
 
@@ -60,6 +60,14 @@ public class PatientService {
         return toResponse(entity);
     }
 
+    public PatientResponse findByCurrentUser(String username) {
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + username));
+        PatientEntity entity = patientRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new RuntimeException("No se encontro un paciente vinculado a tu usuario"));
+        return toResponse(entity);
+    }
+
     public PatientResponse findByDocumentNumber(String documentNumber) {
         PatientEntity entity = patientRepository.findByDocumentNumber(documentNumber)
                 .orElseThrow(() -> new RuntimeException("Paciente no encontrado con documento: " + documentNumber));
@@ -70,22 +78,22 @@ public class PatientService {
         PatientEntity entity = patientRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Paciente no encontrado con ID: " + id));
 
-        // Validar documento duplicado si cambió
+        // Validar documento duplicado si cambio
         if (!entity.getDocumentNumber().equals(request.documentNumber().trim())) {
             Optional<PatientEntity> existingWithDoc = patientRepository.findByDocumentNumber(request.documentNumber().trim());
             if (existingWithDoc.isPresent() && !existingWithDoc.get().getId().equals(id)) {
-                throw new RuntimeException("El número de documento ya pertenece a otro paciente");
+                throw new RuntimeException("El numero de documento ya pertenece a otro paciente");
             }
         }
 
-        // Validar userId si cambió
+        // Validar userId si cambio
         if (request.userId() != null && !request.userId().equals(entity.getUserId())) {
             if (!userRepository.existsById(request.userId())) {
                 throw new RuntimeException("El usuario con ID " + request.userId() + " no existe");
             }
             Optional<PatientEntity> existingWithUser = patientRepository.findByUserId(request.userId());
             if (existingWithUser.isPresent() && !existingWithUser.get().getId().equals(id)) {
-                throw new RuntimeException("El usuario ya está vinculado a otro paciente");
+                throw new RuntimeException("El usuario ya esta vinculado a otro paciente");
             }
         }
 

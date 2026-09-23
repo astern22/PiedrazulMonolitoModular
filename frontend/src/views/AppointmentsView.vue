@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
-import { appointmentService, schedulingService, professionalService } from '@/api'
+import { appointmentService, schedulingService, professionalService, patientService } from '@/api'
 import { useAuth } from '@/composables/useAuth'
 import { validateAppointmentForm, hasErrors } from '@/utils/validators'
 
@@ -14,6 +14,10 @@ const isSubmitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const showCreateForm = ref(false)
+
+// Id del paciente vinculado al usuario autenticado (solo rol paciente)
+const currentPatient = ref(null)
+const isLoadingCurrentPatient = ref(false)
 
 // Franjas de horario disponibles
 const availableSlots = ref([])
@@ -34,6 +38,34 @@ const filter = ref({
   professionalId: '',
   date: '',
 })
+
+async function loadPatientsList() {
+  if (!isPatient.value) return
+  isLoadingCurrentPatient.value = true
+  try {
+    currentPatient.value = await patientService.getMe()
+    form.value.patientId = currentPatient.value ? currentPatient.value.id : ''
+  } catch (error) {
+    currentPatient.value = null
+    console.error('Error al cargar el paciente del usuario actual:', error)
+  } finally {
+    isLoadingCurrentPatient.value = false
+  }
+}
+
+function openCreateForm() {
+  showCreateForm.value = true
+  if (isPatient.value) {
+    form.value.patientId = currentPatient.value ? currentPatient.value.id : ''
+  }
+}
+
+function closeCreateForm() {
+  showCreateForm.value = false
+  if (isPatient.value) {
+    form.value.patientId = currentPatient.value ? currentPatient.value.id : ''
+  }
+}
 
 async function loadProfessionals() {
   try {
@@ -123,6 +155,15 @@ async function handleCreate() {
   errorMessage.value = ''
   successMessage.value = ''
 
+  if (isPatient.value) {
+    if (!currentPatient.value) {
+      errorMessage.value =
+        'No se encontro un paciente vinculado a tu usuario. Contacta al administrador.'
+      return
+    }
+    form.value.patientId = currentPatient.value.id
+  }
+
   fieldErrors.value = validateAppointmentForm(form.value)
   if (hasErrors(fieldErrors.value)) {
     errorMessage.value = 'Corrige los errores del formulario de cita.'
@@ -142,7 +183,7 @@ async function handleCreate() {
 
     successMessage.value = `¡Cita medica #${created.id} agendada correctamente!`
     form.value = {
-      patientId: '',
+      patientId: isPatient.value && currentPatient.value ? currentPatient.value.id : '',
       professionalId: '',
       appointmentDate: '',
       startTime: '08:00',
@@ -179,6 +220,9 @@ async function handleDelete(id) {
 onMounted(() => {
   loadProfessionals()
   fetchAppointments()
+  if (isPatient.value) {
+    loadPatientsList()
+  }
 })
 </script>
 
@@ -193,7 +237,7 @@ onMounted(() => {
         <!-- Solo Pacientes, Administradores y Agendadores pueden crear citas -->
         <button
           v-if="canManage || isPatient"
-          @click="showCreateForm = !showCreateForm"
+          @click="showCreateForm ? closeCreateForm() : openCreateForm()"
           class="btn"
           :class="showCreateForm ? 'btn-secondary' : 'btn-primary'"
         >
@@ -218,7 +262,18 @@ onMounted(() => {
       <h3>Agendar Nueva Cita Medica</h3>
       <form @submit.prevent="handleCreate" novalidate>
         <div class="form-grid">
-          <div class="form-group">
+          <div v-if="isPatient" class="form-group patient-info">
+            <label>Paciente</label>
+            <span v-if="isLoadingCurrentPatient" class="text-muted">Cargando tu informacion...</span>
+            <span v-else-if="currentPatient" class="patient-chip">
+              Paciente #{{ currentPatient.id }}
+            </span>
+            <span v-else class="text-error">
+              No se encontro un paciente vinculado a tu usuario.
+            </span>
+          </div>
+
+          <div v-else class="form-group">
             <label for="patientId">ID del Paciente</label>
             <input
               id="patientId"
@@ -596,6 +651,31 @@ onMounted(() => {
 
 .text-muted-xs {
   color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.patient-info {
+  justify-content: center;
+}
+
+.patient-chip {
+  display: inline-block;
+  padding: 0.65rem 0.85rem;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.text-muted {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.text-error {
+  color: #dc2626;
   font-size: 0.85rem;
 }
 

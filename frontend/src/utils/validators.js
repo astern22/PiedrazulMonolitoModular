@@ -290,7 +290,7 @@ export function validateAppointmentForm({
 }
 
 /**
- * Validación de PatientRequest.
+ * Validacion de PatientRequest.
  * DB: document_number VARCHAR(20) NOT NULL UNIQUE, phone VARCHAR(20), birth_date DATE, user_id BIGINT UNIQUE
  */
 export function validatePatientForm({
@@ -301,12 +301,12 @@ export function validatePatientForm({
 }) {
   return validateFields({
     documentNumber: firstError(
-      required(documentNumber, 'El número de documento'),
-      noSpaces(documentNumber, 'El número de documento'),
-      maxLength(documentNumber, 20, 'El número de documento')
+      required(documentNumber, 'El numero de documento'),
+      noSpaces(documentNumber, 'El numero de documento'),
+      maxLength(documentNumber, 20, 'El numero de documento')
     ),
     phone: firstError(
-      maxLength(phone, 20, 'El teléfono')
+      maxLength(phone, 20, 'El telefono')
     ),
     birthDate: firstError(
       birthDate ? isDate(birthDate) : null,
