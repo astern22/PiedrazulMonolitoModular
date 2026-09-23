@@ -1,0 +1,36 @@
+' C4 Model - Nivel 3: Diagrama de Componentes
+' Componente: Seguridad Transversal (JWT) del contenedor API REST
+' Infraestructura transversal compartida por todos los modulos
+@startuml C4_Componentes_Seguridad_Piedrazul
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title C4 Model - Nivel 3: Componentes de Seguridad Transversal (JWT)
+
+Container_Boundary(api, "API REST Piedrazul") {
+
+    Component(jwtFilter, "JwtAuthenticationFilter", "Spring MVC (OncePerRequestFilter)", "Extrae el header Authorization (Bearer), valida el token, carga el usuario y sus roles y establece la autenticacion en el SecurityContext.", $tags="infrastructure")
+    Component(jwtSvc, "JwtService", "Spring @Service", "Genera, parsea y valida tokens JWT HS256. Firmado con clave HMAC y expiracion de 24 horas.")
+    Component(secConfig, "SecurityConfig", "Spring @Configuration", "Cadena de filtros: CSRF desactivado, sesiones STATELESS, /auth/** publico y cualquier otra ruta autenticada.")
+    Component(beansConfig, "SecurityBeansConfig", "Spring @Configuration", "Define el bean PasswordEncoder BCrypt.")
+
+}
+
+Component(controllerGuard, "Controllers /auth/**", "Modulo Usuarios", "Rutas publicas: registro y login.")
+Component(protectedEndpoints, "Endpoints /api/**", "Modulos Profesionales, Agendamiento, Citas", "Rutas protegidas que requieren token JWT valido.")
+Component(userRepo, "UserRepository", "Modulo Usuarios", "Carga el usuario por username para comprobar habilitacion y roles.")
+Component(loginSvc, "LoginService", "Modulo Usuarios", "Emite el token JWT tras validar credenciales.")
+
+Rel(secConfig, jwtFilter, "Registra el filtro antes de UsernamePasswordAuthenticationFilter", "Seguridad web")
+Rel(secConfig, controllerGuard, "Permite el acceso publico a /auth/**", "URL pattern")
+Rel(secConfig, protectedEndpoints, "Exige autenticacion al resto de rutas", "URL pattern")
+
+Rel(jwtFilter, jwtSvc, "Extrae y valida el username del token")
+Rel(jwtFilter, userRepo, "Carga el usuario y sus roles (ROLE_*)")
+
+Rel(loginSvc, jwtSvc, "Genera el token tras autenticar")
+Rel(jwtSvc, beansConfig, "Reutiliza el bean PasswordEncoder", "Spring Beans")
+
+SHOW_LEGEND()
+LAYOUT_WITH_LEGEND()
+
+@enduml

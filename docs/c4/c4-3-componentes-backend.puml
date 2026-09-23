@@ -1,0 +1,35 @@
+' C4 Model - Nivel 3: Diagrama de Componentes
+' Contenedor: API REST Piedrazul (Monolito Modular)
+' Muestra los modulos funcionales que componen el backend
+@startuml C4_Componentes_Backend_Piedrazul
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title C4 Model - Nivel 3: Componentes del contenedor API REST Piedrazul
+
+Container_Boundary(api, "API REST Piedrazul", "Java 21, Spring Boot") {
+
+    Component(mod_image, "Modulo de Autenticacion y Usuarios", "Spring MVC + Spring Security + JPA", "Controla el registro y login de usuarios. AuthController (POST /auth/register, POST /auth/login), RegisterUserService y LoginService.")
+    Component(mod_prof, "Modulo de Profesionales y Especialidades", "Spring MVC + JPA", "Gestiona el catalogo de especialidades y el registro/consulta de profesionales. ProfesionalController, SpecialtyController, ProfessionalService y SpecialtyService.")
+    Component(mod_agenda, "Modulo de Agendamiento y Disponibilidad", "Spring MVC + JPA", "Gestiona la disponibilidad semanal de los profesionales y el calculo de las franjas horarias libres. WeeklyAvailabilityController, AvailableSlotController, WeeklyAvailabilityService y AvailableSlotService.")
+    Component(mod_citas, "Modulo de Citas Medicas", "Spring MVC + JPA", "Gestiona la creacion, consulta, actualizacion y eliminacion de citas. AppointmentController y AppointmentService.")
+    Component(seguridad, "Seguridad Transversal (JWT)", "Spring Security + JJWT", "Filtro de autenticacion JWT, emision y validacion de tokens, configuracion de la cadena de seguridad y cifrado de contrasenas (BCrypt).")
+
+}
+
+ContainerDb(db, "Base de Datos Piedrazul", "PostgreSQL", "Esquema piedrazul: users, roles, user_roles, specialists, professionals, weekly_availability, appointments.")
+
+Rel(mod_image, mod_prof, "Asocia usuarios con el registro de profesionales", "SQL / Spring Beans")
+Rel(mod_prof, mod_agenda, "Valida profesional activo y su especialidad", "Spring Beans / SQL")
+Rel(mod_agenda, mod_citas, "Consulta citas existentes para calcular franjas libres", "Spring Beans / SQL")
+Rel(mod_agenda, mod_prof, "Obtiene el intervalo de duracion de cita del profesional", "Spring Beans / SQL")
+Rel(mod_image, seguridad, "Emite y valida tokens JWT", "Spring Beans")
+Rel(seguridad, mod_image, "Filtra y autentica las peticiones REST dirigidas a cada modulo", "Servlet Filter")
+Rel(mod_image, db, "Persiste usuarios y roles", "JDBC")
+Rel(mod_prof, db, "Persiste especialidades y profesionales", "JDBC")
+Rel(mod_agenda, db, "Persiste disponibilidad semanal", "JDBC")
+Rel(mod_citas, db, "Persiste citas", "JDBC")
+
+SHOW_LEGEND()
+LAYOUT_WITH_LEGEND()
+
+@enduml

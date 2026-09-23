@@ -1,0 +1,21 @@
+' C4 Model - Nivel 1: Diagrama de Contexto
+' Sistema: Piedrazul - Agendamiento de Citas Medicas
+@startuml C4_Contexto_Piedrazul
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title C4 Model - Nivel 1: Diagrama de Contexto del Sistema Piedrazul
+
+Person(paciente, "Paciente", "Usuario que se registra, consume el catalogo de especialidades y profesionales, y agenda citas medicas.")
+Person(profesional, "Profesional de la Salud", "Usuario que gestiona su disponibilidad semanal y consulta sus citas asignadas.")
+Person(administrador, "Administrador", "Usuario encargado de gestionar especialidades, profesionales y parametros del sistema.")
+
+System(piedrazul, "Piedrazul", "Sistema web para el agendamiento de citas medicas. Permite gestionar usuarios, profesionales, especialidades, disponibilidad semanal y citas.")
+
+Rel(paciente, piedrazul, "Consulta especialidades y profesionales, agenda y gestiona citas", "HTTPS")
+Rel(profesional, piedrazul, "Registra su disponibilidad semanal y consulta sus citas", "HTTPS")
+Rel(administrador, piedrazul, "Administra catalogos de especialidades y profesionales", "HTTPS")
+
+SHOW_LEGEND()
+LAYOUT_WITH_LEGEND()
+
+@enduml

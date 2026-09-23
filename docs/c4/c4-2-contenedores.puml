@@ -1,0 +1,30 @@
+' C4 Model - Nivel 2: Diagrama de Contenedores
+' Sistema: Piedrazul - Agendamiento de Citas Medicas (Monolito Modular)
+@startuml C4_Contenedores_Piedrazul
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title C4 Model - Nivel 2: Diagrama de Contenedores de Piedrazul
+
+Person(paciente, "Paciente", "Consulta especialidades y profesionales, agenda y gestiona citas.")
+Person(profesional, "Profesional de la Salud", "Gestiona su disponibilidad semanal y consulta sus citas.")
+Person(administrador, "Administrador", "Administra catalogos de especialidades y profesionales.")
+
+System_Boundary(piedrazul, "Piedrazul") {
+
+    Container(spa, "SPA Web Piedrazul", "Vue 3, Vite, Vue Router, Axios", "Aplicacion de una sola pagina en el navegador. Maneja autenticacion (JWT), vistas de especialidades, profesionales, disponibilidad y citas.")
+    Container(api, "API REST Piedrazul", "Java 21, Spring Boot, Spring MVC, Spring Security, JPA/Hibernate", "Monolito modular sobre arquitectura hexagonal. Expone los endpoints REST de los modulos de usuarios, profesionales, agendamiento y citas.")
+    ContainerDb(db, "Base de Datos Piedrazul", "PostgreSQL 15+", "Almacena usuarios, roles, especialidades, profesionales, disponibilidad semanal y citas en el esquema piedrazul.")
+
+}
+
+Rel(paciente, spa, "Navega y usa la aplicacion web", "HTTPS")
+Rel(profesional, spa, "Navega y usa la aplicacion web", "HTTPS")
+Rel(administrador, spa, "Navega y usa la aplicacion web", "HTTPS")
+
+Rel(spa, api, "Llamadas REST con token JWT (JSON)", "HTTP/JSON")
+Rel(api, db, "Lectura y escritura via JDBC/JPA (Hibernate)", "JDBC")
+
+SHOW_LEGEND()
+LAYOUT_WITH_LEGEND()
+
+@enduml

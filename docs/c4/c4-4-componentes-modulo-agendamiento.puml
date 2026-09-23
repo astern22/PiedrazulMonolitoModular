@@ -1,0 +1,50 @@
+' C4 Model - Nivel 3: Diagrama de Componentes
+' Componente: Modulo de Agendamiento y Disponibilidad (contenedor API REST)
+' Estructura interna por capas (presentation, application, domain, infrastructure)
+@startuml C4_Componentes_Modulo_Agendamiento_Piedrazul
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title C4 Model - Nivel 3: Componentes del Modulo de Agendamiento y Disponibilidad
+
+Container_Boundary(api, "API REST Piedrazul") {
+
+    Component(slotController, "AvailableSlotController", "Spring MVC", "REST /api/availability/professional/{professionalId}/slots. Calcula las franjas horarias libres de un profesional para una fecha.", $tags="presentation")
+    Component(weeklyController, "WeeklyAvailabilityController", "Spring MVC", "REST /api/availability. Crear, consultar por profesional/dia y desactivar disponibilidad semanal.", $tags="presentation")
+    Component(slotDto, "AvailableSlotResponse", "Java record", "DTO de salida con startTime y endTime de la franja libre.")
+    Component(weekDto, "WeeklyAvailabilityRequest / WeeklyAvailabilityResponse", "Java record", "DTOs de entrada y salida de la disponibilidad semanal.")
+
+    Component(slotSvc, "AvailableSlotService", "Spring @Service", "Combina la disponibilidad semanal activa, el intervalo del profesional y las citas ya reservadas para devolver las franjas libres.")
+    Component(weekSvc, "WeeklyAvailabilityService", "Spring @Service", "Reglas de negocio de disponibilidad: valida rango horario, crea franjas activas y permite desactivarlas.")
+
+    Component(weeklyAv, "WeeklyAvailability", "Clase de dominio", "Entidad de dominio de la disponibilidad semanal (professionalId, dayOfWeek, startTime, endTime, active).")
+
+    Component(weekEntity, "WeeklyAvailabilityEntity", "JPA @Entity", "Tabla weekly_availability.")
+    Component(weekRepo, "WeeklyAvailabilityRepository", "Spring Data JPA", "Acceso a weekly_availability: findByProfessionalIdAndDayOfWeek, findByProfessionalIdAndActiveTrue.")
+
+}
+
+Component(profRepo, "ProfessionalRepository", "Modulo Profesionales", "Obtiene el profesional (active y appointmentIntervalMinutes).")
+Component(apptSvc, "AppointmentService", "Modulo Citas", "Devuelve las citas de un profesional en una fecha (findAppointments).")
+Component(db, "Base de Datos Piedrazul", "PostgreSQL", "Esquema piedrazul, tabla weekly_availability.")
+
+Rel(slotController, slotDto, "Construye el DTO de franja libre")
+Rel(slotController, slotSvc, "Delega el calculo de franjas")
+Rel(weeklyController, weekDto, "Recibe y construye los DTO de disponibilidad")
+Rel(weeklyController, weekSvc, "Delega las operaciones de disponibilidad")
+
+Rel(slotSvc, profRepo, "Valida el profesional activo y su intervalo", "Spring Beans / SQL")
+Rel(slotSvc, weekRepo, "Obtiene las disponibilidades activas del dia", "Spring Beans / SQL")
+Rel(slotSvc, apptSvc, "Obtiene las citas existentes de la fecha", "Spring Beans / SQL")
+
+Rel(weekSvc, weekEntity, "Construye y persiste la disponibilidad")
+Rel(weekSvc, weekRepo, "Consulta y desactiva disponibilidad")
+
+Rel(weekEntity, weekRepo, "Mapeado por JPA")
+Rel(weekRepo, db, "SELECT/INSERT/UPDATE via JDBC", "JDBC")
+
+Rel_Back(weeklyAv, weekEntity, "Modela el agregado de dominio")
+
+SHOW_LEGEND()
+LAYOUT_WITH_LEGEND()
+
+@enduml

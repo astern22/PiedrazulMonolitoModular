@@ -1,0 +1,56 @@
+' C4 Model - Nivel 3: Diagrama de Componentes
+' Componente: Modulo de Autenticacion y Usuarios (contendor API REST)
+' Estructura interna por capas (presentation, application, domain, infrastructure)
+@startuml C4_Componentes_Modulo_Usuarios_Piedrazul
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title C4 Model - Nivel 3: Componentes del Modulo de Autenticacion y Usuarios
+
+Container_Boundary(api, "API REST Piedrazul") {
+
+    Component(controller, "AuthController", "Spring MVC", "REST /auth. POST /auth/register (alta de pacientes con rol PATIENT) y POST /auth/login (emision de token JWT).", $tags="presentation")
+    Component(dtoReq, "LoginRequest / RegisterRequest", "Java record", "DTOs de entrada validados por Jakarta Bean Validation.")
+    Component(dtoRes, "LoginResponse / RegisterResponse", "Java record", "DTOs de salida: token JWT y username registrado.")
+
+    Component(registerSvc, "RegisterUserService", "Spring @Service", "Crea el usuario, cifra la contrasena con BCrypt y le asigna el rol PATIENT.")
+    Component(loginSvc, "LoginService", "Spring @Service", "Valida credenciales contra el repositorio y genera el token JWT.")
+
+    Component(user, "User", "Clase de dominio", "Entidad de dominio del usuario (id, username, password, fullName, email, enabled).")
+    Component(role, "Role", "Clase de dominio", "Entidad de dominio del rol (id, name).")
+
+    Component(userEntity, "UserEntity", "JPA @Entity", "Tabla users. Relacion ManyToMany con RoleEntity via user_roles.")
+    Component(roleEntity, "RoleEntity", "JPA @Entity", "Tabla roles.")
+    Component(userRepo, "UserRepository", "Spring Data JPA", "Acceso a users. findByUsername para login y autenticacion JWT.")
+    Component(roleRepo, "RoleRepository", "Spring Data JPA", "Acceso a roles. findByName(PATIENT) para el registro.")
+
+}
+
+Component(jwt, "JwtService", "Spring @Service", "Emite y valida tokens JWT (solo cliente de la libreria, pertenece al modulo de seguridad).")
+Component(passEncoder, "PasswordEncoder (BCrypt)", "Spring Security", "Cifrado y comparacion de contrasenas.")
+Component(db, "Base de Datos Piedrazul", "PostgreSQL", "Esquema piedrazul, tablas users, roles y user_roles.")
+
+Rel(controller, dtoReq, "Recibe y valida datos de entrada")
+Rel(controller, dtoRes, "Construye la respuesta")
+Rel(controller, registerSvc, "Delega el alta de usuario")
+Rel(controller, loginSvc, "Delega la autenticacion")
+
+Rel(registerSvc, userEntity, "Construye y persiste el usuario")
+Rel(registerSvc, roleRepo, "Busca el rol PATIENT")
+Rel(registerSvc, passEncoder, "Cifra la contrasena")
+
+Rel(loginSvc, userRepo, "Busca el usuario por username")
+Rel(loginSvc, passEncoder, "Compara la contrasena")
+Rel(loginSvc, jwt, "Genera el token JWT")
+
+Rel(userEntity, userRepo, "Mapeado por JPA")
+Rel(roleEntity, roleRepo, "Mapeado por JPA")
+Rel(userRepo, db, "SELECT/INSERT/UPDATE via JDBC", "JDBC")
+Rel(roleRepo, db, "SELECT/INSERT via JDBC", "JDBC")
+
+Rel_Back(user, userEntity, "Modela el agregado de dominio")
+Rel_Back(role, roleEntity, "Modela el agregado de dominio")
+
+SHOW_LEGEND()
+LAYOUT_WITH_LEGEND()
+
+@enduml

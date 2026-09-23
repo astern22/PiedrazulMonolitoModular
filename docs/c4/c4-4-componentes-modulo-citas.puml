@@ -1,0 +1,43 @@
+' C4 Model - Nivel 3: Diagrama de Componentes
+' Componente: Modulo de Citas Medicas (contenedor API REST)
+' Estructura interna por capas (presentation, application, domain, infrastructure)
+@startuml C4_Componentes_Modulo_Citas_Piedrazul
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title C4 Model - Nivel 3: Componentes del Modulo de Citas Medicas
+
+Container_Boundary(api, "API REST Piedrazul") {
+
+    Component(controller, "AppointmentController", "Spring MVC", "REST /api/appointments. Crear, actualizar, consultar por id/profesional, listar, eliminar y buscar por profesional+fecha (/search).", $tags="presentation")
+    Component(cmd, "CreateAppointmentCommand", "Java record", "Comando de creacion de cita (patientId, professionalId, appointmentDate, startTime, endTime).")
+    Component(apptDto, "AppointmentRequest / AppointmentResponse", "Java record", "DTOs de entrada y salida de la cita.")
+
+    Component(apptSvc, "AppointmentService", "Spring @Service", "Reglas de negocio de citas: crear con estado SCHEDULED, consultar, actualizar, eliminar y findAppointments(professional, date).")
+
+    Component(appt, "Appointment", "Clase de dominio", "Entidad de dominio de la cita (patientId, professionalId, appointmentDate, startTime, endTime, status, createdAt).")
+
+    Component(apptEntity, "AppointmentEntity", "JPA @Entity", "Tabla appointments. Genera createdAt en @PrePersist.")
+    Component(apptRepo, "AppointmentRepository", "Spring Data JPA", "Acceso a appointments: findByProfessionalIdAndAppointmentDate, findByProfessionalId.")
+
+}
+
+Component(mod_agenda, "Modulo de Agendamiento", "Spring Beans", "Consume AppointmentService.findAppointments para calcular franjas libres.")
+Component(db, "Base de Datos Piedrazul", "PostgreSQL", "Esquema piedrazul, tabla appointments con indice unico uk_professional_slot.")
+
+Rel(controller, command, "Construye el comando de creacion")
+Rel(controller, apptDto, "Recibe y construye los DTO de la cita")
+Rel(controller, apptSvc, "Delega las operaciones de negocio")
+
+Rel(apptSvc, apptEntity, "Construye y persiste la cita con estado SCHEDULED")
+Rel(apptSvc, apptRepo, "Consulta, guarda y elimina citas")
+
+Rel(apptEntity, apptRepo, "Mapeado por JPA")
+Rel(apptRepo, db, "SELECT/INSERT/UPDATE/DELETE via JDBC", "JDBC")
+
+Rel_Back(appt, apptEntity, "Modela el agregado de dominio")
+Rel(mod_agenda, apptSvc, "Inyecta AppointmentService", "Spring Beans")
+
+SHOW_LEGEND()
+LAYOUT_WITH_LEGEND()
+
+@enduml
