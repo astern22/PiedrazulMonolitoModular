@@ -1,9 +1,14 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { professionalService, specialtyService } from '@/api'
+import { useAuth } from '@/composables/useAuth'
+import { validateProfessionalForm, hasErrors } from '@/utils/validators'
+
+const { canManage } = useAuth()
 
 const professionals = ref([])
 const specialties = ref([])
+const fieldErrors = ref({})
 const isLoading = ref(false)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
@@ -42,29 +47,32 @@ async function fetchProfessionals() {
 }
 
 async function handleCreate() {
-  if (
-    !form.value.userId ||
-    !form.value.specialtyId ||
-    !form.value.professionalType ||
-    !form.value.appointmentIntervalMinutes
-  ) {
-    errorMessage.value = 'Por favor completa todos los campos del profesional.'
+  errorMessage.value = ''
+  successMessage.value = ''
+
+  fieldErrors.value = validateProfessionalForm(form.value)
+  if (hasErrors(fieldErrors.value)) {
+    errorMessage.value = 'Corrige los errores del formulario.'
     return
   }
 
   isSubmitting.value = true
-  errorMessage.value = ''
-  successMessage.value = ''
 
   try {
-    const created = await professionalService.create(form.value)
-    successMessage.value = `¡Profesional #${created.id} registrado con éxito!`
+    const created = await professionalService.create({
+      userId: Number(form.value.userId),
+      specialtyId: Number(form.value.specialtyId),
+      professionalType: form.value.professionalType,
+      appointmentIntervalMinutes: Number(form.value.appointmentIntervalMinutes),
+    })
+    successMessage.value = `¡Profesional #${created.id} registrado con exito!`
     form.value = {
       userId: '',
       specialtyId: '',
       professionalType: 'MEDICO_GENERAL',
       appointmentIntervalMinutes: 30,
     }
+    fieldErrors.value = {}
     await fetchProfessionals()
   } catch (error) {
     errorMessage.value = error.message || 'No se pudo registrar el profesional.'
@@ -89,7 +97,7 @@ onMounted(async () => {
     <div class="page-header">
       <div>
         <h1>Profesionales de la Salud</h1>
-        <p>Administración de médicos, especialistas e intervalos de atención</p>
+        <p>Administracion de medicos, especialistas e intervalos de atencion</p>
       </div>
       <button @click="fetchProfessionals" class="btn btn-outline" :disabled="isLoading">
         Refrescar
@@ -104,11 +112,11 @@ onMounted(async () => {
       {{ successMessage }}
     </div>
 
-    <div class="layout-grid">
-      <!-- Formulario para registrar profesional -->
-      <div class="card form-card">
+    <div class="layout-grid" :class="{ 'single-column': !canManage }">
+      <!-- Formulario para registrar profesional (solo ADMIN y SCHEDULER) -->
+      <div v-if="canManage" class="card form-card">
         <h3>Registrar Profesional</h3>
-        <form @submit.prevent="handleCreate">
+        <form @submit.prevent="handleCreate" novalidate>
           <div class="form-group">
             <label for="userId">ID de Usuario</label>
             <input
@@ -116,9 +124,9 @@ onMounted(async () => {
               v-model="form.userId"
               type="number"
               placeholder="ej. 2"
-              required
               :disabled="isSubmitting"
             />
+            <span v-if="fieldErrors.userId" class="field-error">{{ fieldErrors.userId }}</span>
           </div>
 
           <div class="form-group">
@@ -126,7 +134,6 @@ onMounted(async () => {
             <select
               id="specialtySelect"
               v-model="form.specialtyId"
-              required
               :disabled="isSubmitting"
             >
               <option value="" disabled>Selecciona una especialidad</option>
@@ -134,6 +141,7 @@ onMounted(async () => {
                 {{ spec.name }}
               </option>
             </select>
+            <span v-if="fieldErrors.specialtyId" class="field-error">{{ fieldErrors.specialtyId }}</span>
           </div>
 
           <div class="form-group">
@@ -141,19 +149,19 @@ onMounted(async () => {
             <select
               id="profType"
               v-model="form.professionalType"
-              required
               :disabled="isSubmitting"
             >
-              <option value="MEDICO_GENERAL">Médico General</option>
+              <option value="MEDICO_GENERAL">Medico General</option>
               <option value="ESPECIALISTA">Especialista</option>
-              <option value="ODONTOLOGO">Odontólogo</option>
-              <option value="PSICOLOGO">Psicólogo</option>
+              <option value="ODONTOLOGO">Odontologo</option>
+              <option value="PSICOLOGO">Psicologo</option>
               <option value="PEDIATRA">Pediatra</option>
             </select>
+            <span v-if="fieldErrors.professionalType" class="field-error">{{ fieldErrors.professionalType }}</span>
           </div>
 
           <div class="form-group">
-            <label for="interval">Duración de Cita (minutos)</label>
+            <label for="interval">Duracion de Cita (minutos)</label>
             <input
               id="interval"
               v-model="form.appointmentIntervalMinutes"
@@ -161,9 +169,9 @@ onMounted(async () => {
               min="5"
               step="5"
               placeholder="30"
-              required
               :disabled="isSubmitting"
             />
+            <span v-if="fieldErrors.appointmentIntervalMinutes" class="field-error">{{ fieldErrors.appointmentIntervalMinutes }}</span>
           </div>
 
           <button type="submit" class="btn btn-primary w-full" :disabled="isSubmitting">
@@ -208,7 +216,7 @@ onMounted(async () => {
                 <th>Usuario</th>
                 <th>Especialidad</th>
                 <th>Tipo</th>
-                <th>Duración Cita</th>
+                <th>Duracion Cita</th>
                 <th>Estado</th>
               </tr>
             </thead>
@@ -269,6 +277,16 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: 320px 1fr;
   gap: 1.5rem;
+}
+
+.layout-grid.single-column {
+  grid-template-columns: 1fr;
+}
+
+.field-error {
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.15rem;
 }
 
 @media (max-width: 800px) {

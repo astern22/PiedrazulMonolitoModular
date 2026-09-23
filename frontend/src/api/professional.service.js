@@ -1,7 +1,7 @@
 import apiClient from './client.js'
 
 /**
- * Servicio para la gestión de Profesionales de la Salud (/api/professionals)
+ * Servicio para la gestion de Profesionales de la Salud (/api/professionals)
  * Corresponde a ProfessionalController
  */
 export const professionalService = {
@@ -11,7 +11,7 @@ export const professionalService = {
    * @param {number} data.userId - ID del usuario asociado
    * @param {number} data.specialtyId - ID de la especialidad
    * @param {string} data.professionalType - Tipo de profesional (ej. MEDICO_GENERAL, ESPECIALISTA)
-   * @param {number} data.appointmentIntervalMinutes - Duración de cita en minutos (ej. 20, 30)
+   * @param {number} data.appointmentIntervalMinutes - Duracion de cita en minutos (ej. 20, 30)
    * @returns {Promise<Object>}
    */
   async create({ userId, specialtyId, professionalType, appointmentIntervalMinutes }) {

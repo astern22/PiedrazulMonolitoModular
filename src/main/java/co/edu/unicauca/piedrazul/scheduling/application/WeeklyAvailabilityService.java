@@ -23,7 +23,7 @@ public class WeeklyAvailabilityService {
 
         if (!request.startTime().isBefore(request.endTime())) {
             throw new RuntimeException(
-                    "La hora de inicio debe ser anterior a la hora de finalización"
+                    "La hora de inicio debe ser anterior a la hora de finalizacion"
             );
         }
 

@@ -177,7 +177,7 @@ ON appointments (
 -- Inserciones
 INSERT INTO specialties (name)
 VALUES
-('Médico'),
+('Medico'),
 ('Terapeuta');
 
 INSERT INTO roles (name)
@@ -188,10 +188,10 @@ VALUES
 ('SCHEDULER');
 
 INSERT INTO piedrazul.users (username, password, full_name, email, enabled)
-VALUES ('medico1', '1234', 'Dr. Carlos Pérez', 'medico1@piedrazul.com', TRUE);
+VALUES ('medico1', '1234', 'Dr. Carlos Perez', 'medico1@piedrazul.com', TRUE);
 
 INSERT INTO piedrazul.users (username, password, full_name, email, enabled)
-VALUES ('terapeuta1', '1234', 'Dr. Carlos Pérez', 'terapeuta1@piedrazul.com', TRUE);
+VALUES ('terapeuta1', '1234', 'Dr. Carlos Perez', 'terapeuta1@piedrazul.com', TRUE);
 
 INSERT INTO piedrazul.user_roles (user_id, role_id)
 SELECT u.id, r.id
@@ -212,7 +212,7 @@ SELECT u.id, s.id, 'MEDICO', 30, TRUE
 FROM piedrazul.users u
 CROSS JOIN piedrazul.specialties s
 WHERE u.username = 'medico1'
-  AND s.name = 'Médico';
+  AND s.name = 'Medico';
 
 INSERT INTO piedrazul.professionals (user_id, specialty_id, professional_type, appointment_interval_minutes, active)
 SELECT u.id, s.id, 'TERAPEUTA', 60, TRUE

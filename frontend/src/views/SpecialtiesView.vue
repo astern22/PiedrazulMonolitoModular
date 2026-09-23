@@ -1,9 +1,14 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { specialtyService } from '@/api'
+import { useAuth } from '@/composables/useAuth'
+import { validateSpecialtyForm, hasErrors } from '@/utils/validators'
+
+const { canManage } = useAuth()
 
 const specialties = ref([])
 const newName = ref('')
+const fieldErrors = ref({})
 const isLoading = ref(false)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
@@ -22,19 +27,22 @@ async function fetchSpecialties() {
 }
 
 async function handleCreate() {
-  if (!newName.value.trim()) {
-    errorMessage.value = 'El nombre de la especialidad es obligatorio.'
+  errorMessage.value = ''
+  successMessage.value = ''
+
+  fieldErrors.value = validateSpecialtyForm({ name: newName.value })
+  if (hasErrors(fieldErrors.value)) {
+    errorMessage.value = 'Corrige los errores.'
     return
   }
 
   isSubmitting.value = true
-  errorMessage.value = ''
-  successMessage.value = ''
 
   try {
     const created = await specialtyService.create({ name: newName.value.trim() })
     successMessage.value = `¡Especialidad "${created.name}" creada exitosamente!`
     newName.value = ''
+    fieldErrors.value = {}
     await fetchSpecialties()
   } catch (error) {
     errorMessage.value = error.message || 'No se pudo crear la especialidad.'
@@ -68,11 +76,11 @@ onMounted(() => {
       {{ successMessage }}
     </div>
 
-    <div class="content-grid">
+    <div class="content-grid" :class="{ 'single-column': !canManage }">
       <!-- Formulario para crear -->
-      <div class="card form-card">
+      <div v-if="canManage" class="card form-card">
         <h3>Nueva Especialidad</h3>
-        <form @submit.prevent="handleCreate">
+        <form @submit.prevent="handleCreate" novalidate>
           <div class="form-group">
             <label for="specialtyName">Nombre de la especialidad</label>
             <input
@@ -80,9 +88,9 @@ onMounted(() => {
               v-model="newName"
               type="text"
               placeholder="ej. Cardiologia, Pediatria"
-              required
               :disabled="isSubmitting"
             />
+            <span v-if="fieldErrors.name" class="field-error">{{ fieldErrors.name }}</span>
           </div>
           <button type="submit" class="btn btn-primary w-full" :disabled="isSubmitting">
             <span v-if="isSubmitting" class="spinner"></span>
@@ -161,6 +169,10 @@ onMounted(() => {
   gap: 1.5rem;
 }
 
+.content-grid.single-column {
+  grid-template-columns: 1fr;
+}
+
 @media (max-width: 768px) {
   .content-grid {
     grid-template-columns: 1fr;
@@ -206,6 +218,12 @@ onMounted(() => {
 .form-group input:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.field-error {
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.15rem;
 }
 
 .btn {
@@ -337,4 +355,3 @@ onMounted(() => {
   }
 }
 </style>
-

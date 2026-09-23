@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
+import { required } from '@/utils/validators'
 
 const router = useRouter()
 const route = useRoute()
@@ -14,8 +15,10 @@ const errorMessage = ref('')
 
 async function handleSubmit() {
   errorMessage.value = ''
-  if (!username.value.trim() || !password.value.trim()) {
-    errorMessage.value = 'Por favor ingresa tu usuario y contraseña.'
+  const usernameErr = required(username.value, 'El usuario')
+  const passwordErr = required(password.value, 'La contraseña')
+  if (usernameErr || passwordErr) {
+    errorMessage.value = usernameErr || passwordErr
     return
   }
 
@@ -236,4 +239,3 @@ async function handleSubmit() {
   text-decoration: underline;
 }
 </style>
-

@@ -70,14 +70,16 @@ export const authService = {
   },
 
   /**
-   * Retorna la informacion decodificada del usuario autenticado (username, etc.).
-   * @returns {{username: string, exp?: number, iat?: number}|null}
+   * Retorna la informacion decodificada del usuario autenticado.
+   * Incluye roles si el JWT los contiene en el claim "roles".
+   * @returns {{username: string, roles: string[], exp?: number, iat?: number}|null}
    */
   getCurrentUser() {
     const decoded = decodeToken()
     if (!decoded) return null
     return {
       username: decoded.sub,
+      roles: Array.isArray(decoded.roles) ? decoded.roles : [],
       exp: decoded.exp,
       iat: decoded.iat,
     }

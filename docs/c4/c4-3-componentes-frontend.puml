@@ -9,7 +9,7 @@ title C4 Model - Nivel 3: Componentes del contenedor SPA Web Piedrazul
 Container_Boundary(spa, "SPA Web Piedrazul", "Vue 3 + Vite") {
 
     Component(app, "App.vue", "Vue 3 SFC", "Componente raiz: layout, barra de navegacion con enrutado, indicador de usuario autenticado y cierre de sesion.")
-    Component(router, "Router (vue-router)", "Vue Router", "Define las rutas de la SPA, asigna títulos y ejecuta guardas globales (requiresAuth y requiresGuest).")
+    Component(router, "Router (vue-router)", "Vue Router", "Define las rutas de la SPA, asigna titulos y ejecuta guardas globales (requiresAuth y requiresGuest).")
     Component(composable, "useAuth (composable)", "Vue Composition API", "Estado reactivo de autenticacion: login, registro, logout e isAuthenticated. Reacciona al evento auth:unauthorized.")
 
     Component(viewHome, "HomeView", "Vue 3 SFC", "Pagina de inicio del sistema.")

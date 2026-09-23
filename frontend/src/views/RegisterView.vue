@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
+import { validateRegisterForm, hasErrors } from '@/utils/validators'
 
 const router = useRouter()
 const { register } = useAuth()
@@ -13,6 +14,7 @@ const form = ref({
   password: '',
 })
 
+const fieldErrors = ref({})
 const isLoading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
@@ -21,8 +23,9 @@ async function handleSubmit() {
   errorMessage.value = ''
   successMessage.value = ''
 
-  if (!form.value.username || !form.value.password || !form.value.fullName || !form.value.email) {
-    errorMessage.value = 'Por favor completa todos los campos requeridos.'
+  fieldErrors.value = validateRegisterForm(form.value)
+  if (hasErrors(fieldErrors.value)) {
+    errorMessage.value = 'Por favor corrige los errores en el formulario.'
     return
   }
 
@@ -75,6 +78,7 @@ async function handleSubmit() {
             required
             :disabled="isLoading"
           />
+          <span v-if="fieldErrors.fullName" class="field-error">{{ fieldErrors.fullName }}</span>
         </div>
 
         <div class="form-group">
@@ -87,6 +91,7 @@ async function handleSubmit() {
             required
             :disabled="isLoading"
           />
+          <span v-if="fieldErrors.email" class="field-error">{{ fieldErrors.email }}</span>
         </div>
 
         <div class="form-group">
@@ -100,6 +105,7 @@ async function handleSubmit() {
             autocomplete="username"
             :disabled="isLoading"
           />
+          <span v-if="fieldErrors.username" class="field-error">{{ fieldErrors.username }}</span>
         </div>
 
         <div class="form-group">
@@ -113,6 +119,7 @@ async function handleSubmit() {
             autocomplete="new-password"
             :disabled="isLoading"
           />
+          <span v-if="fieldErrors.password" class="field-error">{{ fieldErrors.password }}</span>
         </div>
 
         <button type="submit" class="btn-submit" :disabled="isLoading">
@@ -224,6 +231,12 @@ async function handleSubmit() {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
+.field-error {
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.15rem;
+}
+
 .btn-submit {
   margin-top: 0.5rem;
   padding: 0.85rem;
@@ -281,4 +294,3 @@ async function handleSubmit() {
   text-decoration: underline;
 }
 </style>
-
