@@ -176,7 +176,7 @@ ON appointments (
 
 INSERT INTO specialties (name)
 VALUES
-('Médico'),
+('Medico'),
 ('Terapeuta');
 
 INSERT INTO roles (name)

@@ -1,7 +1,7 @@
 import apiClient from './client.js'
 
 /**
- * Servicio para la gestión de Horarios y Disponibilidad Semanal (/api/availability)
+ * Servicio para la gestion de Horarios y Disponibilidad Semanal (/api/availability)
  * Corresponde a los controladores AvailableSlotController y WeeklyAvailabilityController
  */
 export const schedulingService = {
@@ -25,7 +25,7 @@ export const schedulingService = {
    * Registra una nueva franja de disponibilidad semanal para un profesional.
    * @param {Object} data
    * @param {number} data.professionalId - ID del profesional
-   * @param {number} data.dayOfWeek - Día de la semana (1 = Lunes, ..., 7 = Domingo)
+   * @param {number} data.dayOfWeek - Dia de la semana (1 = Lunes, ..., 7 = Domingo)
    * @param {string} data.startTime - Hora de inicio (formato HH:mm o HH:mm:ss)
    * @param {string} data.endTime - Hora de fin (formato HH:mm o HH:mm:ss)
    * @returns {Promise<Object>}
@@ -56,9 +56,9 @@ export const schedulingService = {
   },
 
   /**
-   * Consulta la disponibilidad de un profesional para un día específico de la semana.
+   * Consulta la disponibilidad de un profesional para un dia especifico de la semana.
    * @param {number|string} professionalId - ID del profesional
-   * @param {number} dayOfWeek - Día de la semana (1 a 7)
+   * @param {number} dayOfWeek - Dia de la semana (1 a 7)
    * @returns {Promise<Array<Object>>}
    */
   async getByProfessionalAndDay(professionalId, dayOfWeek) {

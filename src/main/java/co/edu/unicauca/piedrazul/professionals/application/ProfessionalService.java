@@ -23,7 +23,7 @@ public class ProfessionalService {
 
         if (repository.existsByUserId(request.userId())) {
             throw new RuntimeException(
-                    "El usuario ya está registrado como profesional"
+                    "El usuario ya esta registrado como profesional"
             );
         }
 

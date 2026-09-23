@@ -1,11 +1,16 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { schedulingService, professionalService } from '@/api'
+import { useAuth } from '@/composables/useAuth'
+import { validateWeeklyAvailabilityForm, hasErrors } from '@/utils/validators'
+
+const { canManage } = useAuth()
 
 const professionals = ref([])
 const selectedProfId = ref('')
 const weeklyAvailabilities = ref([])
 const isLoadingAvailabilities = ref(false)
+const fieldErrors = ref({})
 
 // Formulario de nueva disponibilidad semanal
 const newAvailability = ref({
@@ -32,10 +37,10 @@ const successMessage = ref('')
 const daysOfWeekMap = {
   1: 'Lunes',
   2: 'Martes',
-  3: 'Miércoles',
+  3: 'Miercoles',
   4: 'Jueves',
   5: 'Viernes',
-  6: 'Sábado',
+  6: 'Sabado',
   7: 'Domingo',
 }
 
@@ -68,18 +73,26 @@ async function fetchWeeklyAvailabilities(profId = selectedProfId.value) {
 }
 
 async function handleCreateAvailability() {
-  if (!newAvailability.value.professionalId) {
-    errorMessage.value = 'Debes seleccionar o ingresar un ID de profesional.'
+  errorMessage.value = ''
+  successMessage.value = ''
+
+  fieldErrors.value = validateWeeklyAvailabilityForm(newAvailability.value)
+  if (hasErrors(fieldErrors.value)) {
+    errorMessage.value = 'Corrige los errores del formulario de disponibilidad.'
     return
   }
 
   isSubmittingAvailability.value = true
-  errorMessage.value = ''
-  successMessage.value = ''
 
   try {
-    await schedulingService.createWeeklyAvailability(newAvailability.value)
-    successMessage.value = `¡Disponibilidad para el día ${daysOfWeekMap[newAvailability.value.dayOfWeek]} agregada con éxito!`
+    await schedulingService.createWeeklyAvailability({
+      professionalId: Number(newAvailability.value.professionalId),
+      dayOfWeek: Number(newAvailability.value.dayOfWeek),
+      startTime: newAvailability.value.startTime,
+      endTime: newAvailability.value.endTime,
+    })
+    successMessage.value = `¡Disponibilidad para el dia ${daysOfWeekMap[newAvailability.value.dayOfWeek]} agregada con exito!`
+    fieldErrors.value = {}
     if (selectedProfId.value == newAvailability.value.professionalId) {
       await fetchWeeklyAvailabilities(selectedProfId.value)
     }
@@ -135,7 +148,7 @@ onMounted(() => {
     <div class="page-header">
       <div>
         <h1>Disponibilidad y Franjas de Horario</h1>
-        <p>Configuración de horarios semanales y cálculo de franjas horarias disponibles</p>
+        <p>Configuracion de horarios semanales y calculo de franjas horarias disponibles</p>
       </div>
     </div>
 
@@ -148,21 +161,21 @@ onMounted(() => {
     </div>
 
     <div class="layout-grid">
-      <!-- Sección Izquierda: Configurar Disponibilidad Semanal -->
+      <!-- Seccion Izquierda: Configurar Disponibilidad Semanal -->
       <div class="column">
-        <div class="card">
+        <!-- Solo ADMIN y SCHEDULER pueden registrar horarios semanales -->
+        <div v-if="canManage" class="card">
           <h3>Registrar Horario Semanal</h3>
           <p class="section-desc">
-            Define los días y rangos en los que el profesional atiende consultas.
+            Define los dias y rangos en los que el profesional atiende consultas.
           </p>
 
-          <form @submit.prevent="handleCreateAvailability">
+          <form @submit.prevent="handleCreateAvailability" novalidate>
             <div class="form-group">
               <label for="profSelect">Profesional</label>
               <select
                 id="profSelect"
                 v-model="newAvailability.professionalId"
-                required
                 :disabled="isSubmittingAvailability"
               >
                 <option value="" disabled>Selecciona un profesional</option>
@@ -174,24 +187,25 @@ onMounted(() => {
                   Dr(a). ID #{{ prof.id }} ({{ prof.professionalType }})
                 </option>
               </select>
+              <span v-if="fieldErrors.professionalId" class="field-error">{{ fieldErrors.professionalId }}</span>
             </div>
 
             <div class="form-group">
-              <label for="dayOfWeek">Día de la Semana</label>
+              <label for="dayOfWeek">Dia de la Semana</label>
               <select
                 id="dayOfWeek"
                 v-model="newAvailability.dayOfWeek"
-                required
                 :disabled="isSubmittingAvailability"
               >
                 <option :value="1">Lunes</option>
                 <option :value="2">Martes</option>
-                <option :value="3">Miércoles</option>
+                <option :value="3">Miercoles</option>
                 <option :value="4">Jueves</option>
                 <option :value="5">Viernes</option>
-                <option :value="6">Sábado</option>
+                <option :value="6">Sabado</option>
                 <option :value="7">Domingo</option>
               </select>
+              <span v-if="fieldErrors.dayOfWeek" class="field-error">{{ fieldErrors.dayOfWeek }}</span>
             </div>
 
             <div class="time-row">
@@ -201,9 +215,9 @@ onMounted(() => {
                   id="startTime"
                   v-model="newAvailability.startTime"
                   type="time"
-                  required
                   :disabled="isSubmittingAvailability"
                 />
+                <span v-if="fieldErrors.startTime" class="field-error">{{ fieldErrors.startTime }}</span>
               </div>
               <div class="form-group">
                 <label for="endTime">Hora Fin</label>
@@ -211,9 +225,9 @@ onMounted(() => {
                   id="endTime"
                   v-model="newAvailability.endTime"
                   type="time"
-                  required
                   :disabled="isSubmittingAvailability"
                 />
+                <span v-if="fieldErrors.endTime" class="field-error">{{ fieldErrors.endTime }}</span>
               </div>
             </div>
 
@@ -225,7 +239,7 @@ onMounted(() => {
         </div>
 
         <!-- Listado de disponibilidades registradas -->
-        <div class="card mt-4">
+        <div class="card" :class="{ 'mt-4': canManage }">
           <div class="card-header-flex">
             <h3>Horarios Semanales</h3>
             <select
@@ -256,6 +270,7 @@ onMounted(() => {
                 <span class="hours">{{ item.startTime }} - {{ item.endTime }}</span>
               </div>
               <button
+                v-if="canManage"
                 @click="handleDeactivate(item.id)"
                 class="btn-danger-xs"
                 title="Desactivar horario"
@@ -267,12 +282,12 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Sección Derecha: Consulta en Tiempo Real de Franjas Libres -->
+      <!-- Seccion Derecha: Consulta en Tiempo Real de Franjas Libres -->
       <div class="column">
         <div class="card">
           <h3>Consultar Franjas Horarias Disponibles</h3>
           <p class="section-desc">
-            Calcula dinámicamente los intervalos libres para citas según la duración asignada y citas existentes.
+            Calcula dinamicamente los intervalos libres para citas segun la duracion asignada y citas existentes.
           </p>
 
           <form @submit.prevent="handleQuerySlots" class="slots-query-form">
@@ -305,7 +320,7 @@ onMounted(() => {
 
             <div v-else-if="hasQueriedSlots && availableSlots.length === 0" class="empty-state">
               <p>⚠️ No hay franjas disponibles para este profesional en la fecha seleccionada.</p>
-              <small>Verifica si el profesional tiene disponibilidad semanal ese día y no tiene la agenda llena.</small>
+              <small>Verifica si el profesional tiene disponibilidad semanal ese dia y no tiene la agenda llena.</small>
             </div>
 
             <div v-else-if="availableSlots.length > 0">
@@ -411,6 +426,12 @@ onMounted(() => {
 .form-group select:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.field-error {
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.15rem;
 }
 
 .time-row {

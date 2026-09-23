@@ -3,7 +3,7 @@ import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
-const { user, isAuthenticated, logout } = useAuth()
+const { user, isAuthenticated, canManage, canManagePatients, hasAnyRole, logout } = useAuth()
 
 function handleLogout() {
   logout()
@@ -22,17 +22,28 @@ function handleLogout() {
 
         <nav class="nav-menu">
           <router-link to="/" class="nav-item">Inicio</router-link>
-          <router-link v-if="isAuthenticated" to="/specialties" class="nav-item">
+          <router-link
+            v-if="canManagePatients"
+            to="/patients"
+            class="nav-item"
+          >
+            Pacientes
+          </router-link>
+          <router-link v-if="canManage" to="/specialties" class="nav-item">
             Especialidades
           </router-link>
-          <router-link v-if="isAuthenticated" to="/professionals" class="nav-item">
+          <router-link v-if="canManage" to="/professionals" class="nav-item">
             Profesionales
           </router-link>
-          <router-link v-if="isAuthenticated" to="/scheduling" class="nav-item">
+          <router-link
+            v-if="hasAnyRole(['ADMIN', 'SCHEDULER', 'PROFESSIONAL'])"
+            to="/scheduling"
+            class="nav-item"
+          >
             Horarios
           </router-link>
           <router-link v-if="isAuthenticated" to="/appointments" class="nav-item">
-            Citas Médicas
+            Citas Medicas
           </router-link>
         </nav>
 
