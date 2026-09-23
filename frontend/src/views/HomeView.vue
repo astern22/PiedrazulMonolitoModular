@@ -32,6 +32,12 @@ const { user, isAuthenticated } = useAuth()
         <router-link v-if="isAuthenticated" to="/appointments" class="btn btn-primary">
           Gestionar Citas
         </router-link>
+        <router-link v-if="isAuthenticated" to="/scheduling" class="btn btn-secondary">
+          Horarios y Franjas
+        </router-link>
+        <router-link v-if="isAuthenticated" to="/professionals" class="btn btn-secondary">
+          Profesionales
+        </router-link>
         <router-link v-if="isAuthenticated" to="/specialties" class="btn btn-secondary">
           Ver Especialidades
         </router-link>
@@ -41,22 +47,36 @@ const { user, isAuthenticated } = useAuth()
     <section class="features-grid">
       <div class="feature-card">
         <div class="feature-icon">🔐</div>
-        <h3>Autenticacion JWT</h3>
+        <h3>Autenticación JWT</h3>
         <p>Control de acceso basado en tokens y roles para pacientes y profesionales de la salud.</p>
         <span class="endpoint-tag">/auth</span>
       </div>
 
       <div class="feature-card">
         <div class="feature-icon">🩺</div>
-        <h3>Especialidades Medicas</h3>
-        <p>Catalogo centralizado de especialidades medicas disponibles en el centro de salud.</p>
+        <h3>Especialidades Médicas</h3>
+        <p>Catálogo centralizado de especialidades médicas disponibles en el centro de salud.</p>
         <span class="endpoint-tag">/api/specialties</span>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">👨‍⚕️</div>
+        <h3>Profesionales de la Salud</h3>
+        <p>Registro de profesionales, asociación con usuarios y definición de intervalos de consulta.</p>
+        <span class="endpoint-tag">/api/professionals</span>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">⏰</div>
+        <h3>Disponibilidad y Franjas</h3>
+        <p>Gestión de disponibilidad semanal y cálculo automático de franjas horarias libres.</p>
+        <span class="endpoint-tag">/api/availability</span>
       </div>
 
       <div class="feature-card">
         <div class="feature-icon">📅</div>
         <h3>Agendamiento de Citas</h3>
-        <p>Creacion, actualizacion, filtrado por profesional/fecha y cancelacion de citas medicas.</p>
+        <p>Creación, actualización, filtrado por profesional/fecha y cancelación de citas médicas.</p>
         <span class="endpoint-tag">/api/appointments</span>
       </div>
     </section>

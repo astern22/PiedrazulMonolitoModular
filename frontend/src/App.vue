@@ -25,8 +25,14 @@ function handleLogout() {
           <router-link v-if="isAuthenticated" to="/specialties" class="nav-item">
             Especialidades
           </router-link>
+          <router-link v-if="isAuthenticated" to="/professionals" class="nav-item">
+            Profesionales
+          </router-link>
+          <router-link v-if="isAuthenticated" to="/scheduling" class="nav-item">
+            Horarios
+          </router-link>
           <router-link v-if="isAuthenticated" to="/appointments" class="nav-item">
-            Citas Medicas
+            Citas Médicas
           </router-link>
         </nav>
 
