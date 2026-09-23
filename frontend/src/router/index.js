@@ -26,7 +26,7 @@ const router = createRouter({
       meta: {
         requiresAuth: true,
         roles: ['PROFESSIONAL', 'MEDICO', 'ADMIN'],
-        title: 'Gestión de Pacientes - Piedrazul',
+        title: 'Gestion de Pacientes - Piedrazul',
       },
     },
     {

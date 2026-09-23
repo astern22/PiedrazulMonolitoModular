@@ -7,10 +7,10 @@ const { user, isAuthenticated, canManage, canManagePatients, hasAnyRole } = useA
 <template>
   <div class="home-container">
     <section class="hero-card">
-      <h1 class="hero-title">Sistema de Gestión de Citas Médicas</h1>
+      <h1 class="hero-title">Sistema de Gestion de Citas Medicas</h1>
       <p class="hero-subtitle">
-        Plataforma unificada para la administración de especialidades, profesionales y citas médicas
-        con autenticación segura.
+        Plataforma unificada para la administracion de especialidades, profesionales y citas medicas
+        con autenticacion segura.
       </p>
 
       <div v-if="isAuthenticated" class="welcome-banner">
@@ -21,7 +21,7 @@ const { user, isAuthenticated, canManage, canManagePatients, hasAnyRole } = useA
 
       <div class="action-buttons">
         <router-link v-if="!isAuthenticated" to="/login" class="btn btn-primary">
-          Iniciar Sesión
+          Iniciar Sesion
         </router-link>
         <router-link v-if="!isAuthenticated" to="/register" class="btn btn-secondary">
           Registrarse
@@ -30,7 +30,7 @@ const { user, isAuthenticated, canManage, canManagePatients, hasAnyRole } = useA
           Gestionar Citas
         </router-link>
         <router-link v-if="isAuthenticated && canManagePatients" to="/patients" class="btn btn-secondary">
-          Gestión de Pacientes
+          Gestion de Pacientes
         </router-link>
         <router-link v-if="isAuthenticated && hasAnyRole(['ADMIN', 'SCHEDULER', 'PROFESSIONAL'])" to="/scheduling" class="btn btn-secondary">
           Horarios y Franjas

@@ -43,7 +43,7 @@ function handleLogout() {
             Horarios
           </router-link>
           <router-link v-if="isAuthenticated" to="/appointments" class="nav-item">
-            Citas Médicas
+            Citas Medicas
           </router-link>
         </nav>
 

@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import co.edu.unicauca.piedrazul.patients.application.PatientService;
@@ -30,6 +31,12 @@ public class PatientController {
     @GetMapping
     public ResponseEntity<List<PatientResponse>> findAll() {
         return ResponseEntity.ok(patientService.findAll());
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<PatientResponse> findByCurrentUser(Authentication authentication) {
+        String username = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(patientService.findByCurrentUser(username));
     }
 
     @GetMapping("/{id}")
