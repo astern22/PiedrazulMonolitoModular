@@ -51,7 +51,7 @@ async function handleSubmit() {
   <div class="auth-container">
     <div class="auth-card">
       <div class="auth-header">
-        <div class="auth-icon">📝</div>
+        <div class="auth-icon"></div>
         <h2>Crear Cuenta</h2>
         <p>Registrate en la plataforma Piedrazul</p>
       </div>

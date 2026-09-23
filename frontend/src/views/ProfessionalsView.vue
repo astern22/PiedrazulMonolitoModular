@@ -92,7 +92,7 @@ onMounted(async () => {
         <p>Administración de médicos, especialistas e intervalos de atención</p>
       </div>
       <button @click="fetchProfessionals" class="btn btn-outline" :disabled="isLoading">
-        🔄 Refrescar
+        Refrescar
       </button>
     </div>
 
@@ -107,7 +107,7 @@ onMounted(async () => {
     <div class="layout-grid">
       <!-- Formulario para registrar profesional -->
       <div class="card form-card">
-        <h3>➕ Registrar Profesional</h3>
+        <h3>Registrar Profesional</h3>
         <form @submit.prevent="handleCreate">
           <div class="form-group">
             <label for="userId">ID de Usuario</label>
@@ -222,7 +222,7 @@ onMounted(async () => {
                   </span>
                 </td>
                 <td>{{ prof.professionalType }}</td>
-                <td>⏱️ {{ prof.appointmentIntervalMinutes }} min</td>
+                <td>{{ prof.appointmentIntervalMinutes }} min</td>
                 <td>
                   <span class="status-badge status-active">
                     {{ prof.active ? 'ACTIVO' : 'INACTIVO' }}

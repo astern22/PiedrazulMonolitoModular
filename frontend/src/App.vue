@@ -77,8 +77,7 @@ function handleLogout() {
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
-    sans-serif;
+  font-family: "IBM Plex Sans Thai", sans-serif;
   background-color: #f8fafc;
   color: #1e293b;
   -webkit-font-smoothing: antialiased;

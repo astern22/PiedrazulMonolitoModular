@@ -15,10 +15,8 @@ const { user, isAuthenticated } = useAuth()
       </p>
 
       <div v-if="isAuthenticated" class="welcome-banner">
-        <span class="avatar-icon">👤</span>
         <div>
           <h3>¡Bienvenido de nuevo, {{ user?.username }}!</h3>
-          <p>Tu sesion se encuentra activa con token de acceso seguro.</p>
         </div>
       </div>
 
@@ -41,43 +39,6 @@ const { user, isAuthenticated } = useAuth()
         <router-link v-if="isAuthenticated" to="/specialties" class="btn btn-secondary">
           Ver Especialidades
         </router-link>
-      </div>
-    </section>
-
-    <section class="features-grid">
-      <div class="feature-card">
-        <div class="feature-icon">🔐</div>
-        <h3>Autenticación JWT</h3>
-        <p>Control de acceso basado en tokens y roles para pacientes y profesionales de la salud.</p>
-        <span class="endpoint-tag">/auth</span>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">🩺</div>
-        <h3>Especialidades Médicas</h3>
-        <p>Catálogo centralizado de especialidades médicas disponibles en el centro de salud.</p>
-        <span class="endpoint-tag">/api/specialties</span>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">👨‍⚕️</div>
-        <h3>Profesionales de la Salud</h3>
-        <p>Registro de profesionales, asociación con usuarios y definición de intervalos de consulta.</p>
-        <span class="endpoint-tag">/api/professionals</span>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">⏰</div>
-        <h3>Disponibilidad y Franjas</h3>
-        <p>Gestión de disponibilidad semanal y cálculo automático de franjas horarias libres.</p>
-        <span class="endpoint-tag">/api/availability</span>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">📅</div>
-        <h3>Agendamiento de Citas</h3>
-        <p>Creación, actualización, filtrado por profesional/fecha y cancelación de citas médicas.</p>
-        <span class="endpoint-tag">/api/appointments</span>
       </div>
     </section>
   </div>
@@ -192,40 +153,6 @@ const { user, isAuthenticated } = useAuth()
 .btn-secondary:hover {
   background: #f1f5f9;
   border-color: #94a3b8;
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-}
-
-.feature-card {
-  background: white;
-  border-radius: 12px;
-  padding: 1.75rem;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
-  display: flex;
-  flex-direction: column;
-}
-
-.feature-icon {
-  font-size: 2.25rem;
-  margin-bottom: 1rem;
-}
-
-.feature-card h3 {
-  font-size: 1.2rem;
-  color: #1e293b;
-  margin-bottom: 0.5rem;
-}
-
-.feature-card p {
-  font-size: 0.9rem;
-  color: #64748b;
-  line-height: 1.5;
-  flex: 1;
 }
 
 .endpoint-tag {

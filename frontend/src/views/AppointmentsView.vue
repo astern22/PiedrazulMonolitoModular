@@ -193,7 +193,7 @@ onMounted(() => {
           class="btn"
           :class="showCreateForm ? 'btn-secondary' : 'btn-primary'"
         >
-          {{ showCreateForm ? '✖ Cancelar' : '➕ Agendar Cita' }}
+          {{ showCreateForm ? 'Cancelar' : 'Agendar Cita' }}
         </button>
         <button @click="fetchAppointments" class="btn btn-outline" :disabled="isLoading">
           🔄 Refrescar
