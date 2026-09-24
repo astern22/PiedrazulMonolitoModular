@@ -1,9 +1,40 @@
 <script setup>
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
 const { user, isAuthenticated, canManage, canManagePatients, hasAnyRole, logout } = useAuth()
+const MIN_SCALE = 0.8
+const MAX_SCALE = 1.6
+const SCALE_STEP = 0.1
+const STORAGE_KEY = 'piedrazul-text-scale'
+
+const textScale = ref(1)
+
+onMounted(() => {
+  const saved = parseFloat(localStorage.getItem(STORAGE_KEY))
+  if (!Number.isNaN(saved) && saved >= MIN_SCALE && saved <= MAX_SCALE) {
+    textScale.value = saved
+  }
+})
+
+watch(textScale, (value) => {
+  document.documentElement.style.fontSize = `${value * 16}px`
+  localStorage.setItem(STORAGE_KEY, String(value))
+})
+
+function increaseScale() {
+  textScale.value = Math.min(MAX_SCALE, Math.round((textScale.value + SCALE_STEP) * 100) / 100)
+}
+
+function decreaseScale() {
+  textScale.value = Math.max(MIN_SCALE, Math.round((textScale.value - SCALE_STEP) * 100) / 100)
+}
+
+function resetScale() {
+  textScale.value = 1
+}
 
 function handleLogout() {
   logout()
@@ -77,6 +108,36 @@ function handleLogout() {
     <footer class="app-footer">
       <p>&copy; 2026 Piedrazul Monolito Modular — Modulo de Pacientes, Profesionales y Citas</p>
     </footer>
+     <!-- Panel de accesibilidad siempre visible -->
+    <div class="accessibility-panel" role="group" aria-label="Accesibilidad de texto">
+      <span class="accessibility-label">Texto</span>
+      <button
+        class="accessibility-btn"
+        @click="decreaseScale"
+        :disabled="textScale <= MIN_SCALE"
+        aria-label="Reducir tamaño del texto"
+        title="Reducir texto"
+      >
+        A−
+      </button>
+      <button
+        class="accessibility-btn accessibility-reset"
+        @click="resetScale"
+        aria-label="Restablecer tamaño del texto"
+        title="Restablecer texto"
+      >
+        A
+      </button>
+      <button
+        class="accessibility-btn"
+        @click="increaseScale"
+        :disabled="textScale >= MAX_SCALE"
+        aria-label="Aumentar tamaño del texto"
+        title="Aumentar texto"
+      >
+        A+
+      </button>
+    </div>
   </div>
 </template>
 
@@ -261,5 +322,65 @@ body {
   font-size: 0.825rem;
   border-top: 1px solid #e2e8f0;
   background: white;
+}
+
+
+.accessibility-panel {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+  padding: 0.45rem 0.6rem;
+}
+
+.accessibility-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-right: 0.2rem;
+}
+
+.accessibility-btn {
+  min-width: 2.2rem;
+  height: 2.2rem;
+  padding: 0 0.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 9999px;
+  background: #f8fafc;
+  color: #1e3a8a;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.accessibility-btn:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: #2563eb;
+}
+
+.accessibility-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.accessibility-reset {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+}
+
+.accessibility-reset:hover:not(:disabled) {
+  background: #1d4ed8;
 }
 </style>
