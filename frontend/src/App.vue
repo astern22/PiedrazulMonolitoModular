@@ -46,10 +46,12 @@ function handleLogout() {
   <div class="app-layout">
     <header class="app-header">
       <div class="nav-container">
-        <router-link to="/" class="brand-link">
-          <span class="brand-text">Piedrazul</span>
-          <span class="brand-subtitle">Salud</span>
-        </router-link>
+        <div class="brand-container">
+          <img src="../src/assets/logo.png" alt="">
+          <router-link to="/" class="brand-link">
+            <span class="brand-text">Piedra Azul</span>
+          </router-link>
+        </div>
 
         <nav class="nav-menu">
           <router-link to="/" class="nav-item">Inicio</router-link>
@@ -141,8 +143,7 @@ function handleLogout() {
   </div>
 </template>
 
-<style>
-/* Estilos globales basicos */
+<style> 
 * {
   box-sizing: border-box;
 }
@@ -182,6 +183,19 @@ body {
   gap: 1.5rem;
 }
 
+.brand-container {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+}
+
+.brand-container img {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.2));
+}
+
 .brand-link {
   display: flex;
   align-items: center;
@@ -199,16 +213,6 @@ body {
   font-weight: 800;
   letter-spacing: -0.02em;
   color: #2f0968;
-}
-
-.brand-subtitle {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  background: #eff6ff;
-  color: #4d1d93;
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
 }
 
 .nav-menu {
@@ -250,8 +254,8 @@ body {
   gap: 0.4rem;
   background: #f1f5f9;
   padding: 0.4rem 0.8rem;
-  border-radius: 9999px;
   border: 1px solid #e2e8f0;
+  border-radius: 6px;
 }
 
 .user-dot {

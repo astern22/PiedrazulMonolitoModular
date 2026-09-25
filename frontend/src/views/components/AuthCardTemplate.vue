@@ -3,7 +3,7 @@
 
 <template>
     <div class="auth-logo">
-        <img src="../../assets/logo.svg" height="200rem" />  <!-- \TODO: Reemplazar icono -->
+        <img src="../../assets/logo.png"/>
         <h1>Clinica Piedra Azul</h1>
         <p>Medicina alternativa y bienestar natural</p>
     </div>
@@ -35,7 +35,10 @@
 }
 
 .auth-logo img {
-  filter: invert();
+  max-width: 100%;
+  height: auto;
+  filter: drop-shadow(5px 5px 10px #00000046);
+  margin: 0;
 }
 
 .auth-logo img {
