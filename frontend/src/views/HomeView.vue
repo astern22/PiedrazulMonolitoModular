@@ -92,7 +92,8 @@ const { user, isAuthenticated, canManage, canManagePatients, hasAnyRole } = useA
 
 .welcome-banner {
   display: flex;
-  align-items: center;
+  align-items: center !important;
+  text-align: center !important;
   gap: 1rem;
   background: #f0fdf4;
   border: 1px solid #bbf7d0;

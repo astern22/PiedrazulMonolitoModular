@@ -51,34 +51,34 @@ function handleLogout() {
           <router-link to="/" class="brand-link">
             <span class="brand-text">Piedra Azul</span>
           </router-link>
-        </div>
 
-        <nav class="nav-menu">
-          <router-link to="/" class="nav-item">Inicio</router-link>
-          <router-link
-            v-if="canManagePatients"
-            to="/patients"
-            class="nav-item"
-          >
-            Pacientes
-          </router-link>
-          <router-link v-if="canManage" to="/specialties" class="nav-item">
-            Especialidades
-          </router-link>
-          <router-link v-if="canManage" to="/professionals" class="nav-item">
-            Profesionales
-          </router-link>
-          <router-link
-            v-if="hasAnyRole(['ADMIN', 'SCHEDULER', 'PROFESSIONAL'])"
-            to="/scheduling"
-            class="nav-item"
-          >
-            Horarios
-          </router-link>
-          <router-link v-if="isAuthenticated" to="/appointments" class="nav-item">
-            Citas Medicas
-          </router-link>
-        </nav>
+          <nav class="nav-menu">
+            <router-link to="/" class="nav-item">Inicio</router-link>
+            <router-link
+              v-if="canManagePatients"
+              to="/patients"
+              class="nav-item"
+            >
+              Pacientes
+            </router-link>
+            <router-link v-if="canManage" to="/specialties" class="nav-item">
+              Especialidades
+            </router-link>
+            <router-link v-if="canManage" to="/professionals" class="nav-item">
+              Profesionales
+            </router-link>
+            <router-link
+              v-if="hasAnyRole(['ADMIN', 'SCHEDULER', 'PROFESSIONAL'])"
+              to="/scheduling"
+              class="nav-item"
+            >
+              Horarios
+            </router-link>
+            <router-link v-if="isAuthenticated" to="/appointments" class="nav-item">
+              Citas Medicas
+            </router-link>
+          </nav>
+        </div>
 
         <div class="nav-auth">
           <template v-if="isAuthenticated">
@@ -187,6 +187,7 @@ body {
   display: flex;
   align-items: center;
   width: fit-content;
+  gap: 10px;
 }
 
 .brand-container img {
