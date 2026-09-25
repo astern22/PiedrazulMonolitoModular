@@ -527,7 +527,7 @@ onMounted(() => {
 }
 
 .create-card {
-  border-left: 4px solid #2563eb;
+  border-left: 4px solid #c725eb;
 }
 
 .form-grid {
@@ -558,7 +558,7 @@ onMounted(() => {
   display: block;
   font-size: 0.825rem;
   font-weight: 700;
-  color: #1e3a8a;
+  color: #2f0968;
   margin-bottom: 0.6rem;
 }
 
@@ -578,7 +578,7 @@ onMounted(() => {
 .slot-chip {
   background: white;
   border: 1px solid #93c5fd;
-  color: #1d4ed8;
+  color: #4d2785;
   padding: 0.4rem 0.8rem;
   border-radius: 9999px;
   font-size: 0.8rem;
@@ -594,9 +594,9 @@ onMounted(() => {
 }
 
 .slot-selected {
-  background: #2563eb !important;
+  background: #4d1d93 !important;
   color: white !important;
-  border-color: #1d4ed8 !important;
+  border-color: #4d2785 !important;
   box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
 }
 
@@ -639,7 +639,7 @@ onMounted(() => {
 
 .form-group input:focus,
 .form-group select:focus {
-  border-color: #2563eb;
+  border-color: #4d1d93;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
@@ -662,7 +662,7 @@ onMounted(() => {
   display: inline-block;
   padding: 0.65rem 0.85rem;
   background: #eff6ff;
-  color: #1d4ed8;
+  color: #4d2785;
   border: 1px solid #bfdbfe;
   border-radius: 8px;
   font-size: 0.9rem;
@@ -694,12 +694,12 @@ onMounted(() => {
 }
 
 .btn-primary {
-  background: #2563eb;
+  background: #4d1d93;
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: #4d2785;
 }
 
 .btn-secondary {
@@ -757,7 +757,7 @@ onMounted(() => {
 
 .status-scheduled {
   background: #eff6ff;
-  color: #1d4ed8;
+  color: #4d2785;
 }
 
 .status-completed {
@@ -840,7 +840,7 @@ onMounted(() => {
   display: inline-block;
   width: 12px;
   height: 12px;
-  border: 2px solid #2563eb;
+  border: 2px solid #4d1d93;
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
@@ -850,7 +850,7 @@ onMounted(() => {
 .spinner-large {
   width: 32px;
   height: 32px;
-  border: 3px solid #2563eb;
+  border: 3px solid #4d1d93;
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;

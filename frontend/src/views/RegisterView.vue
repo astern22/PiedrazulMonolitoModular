@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { validateRegisterForm, hasErrors } from '@/utils/validators'
+import AuthCardTemplate from './components/AuthCardTemplate.vue'
 
 const router = useRouter()
 const { register } = useAuth()
@@ -53,86 +54,89 @@ async function handleSubmit() {
 <template>
   <div class="auth-container">
     <div class="auth-card">
-      <div class="auth-header">
-        <div class="auth-icon"></div>
-        <h2>Crear Cuenta</h2>
-        <p>Registrate en la plataforma Piedrazul</p>
-      </div>
-
-      <div v-if="errorMessage" class="alert alert-error">
-        {{ errorMessage }}
-      </div>
-
-      <div v-if="successMessage" class="alert alert-success">
-        {{ successMessage }}
-      </div>
-
-      <form @submit.prevent="handleSubmit" class="auth-form">
-        <div class="form-group">
-          <label for="fullName">Nombre Completo</label>
-          <input
-            id="fullName"
-            v-model="form.fullName"
-            type="text"
-            placeholder="ej. Juan Perez"
-            required
-            :disabled="isLoading"
-          />
-          <span v-if="fieldErrors.fullName" class="field-error">{{ fieldErrors.fullName }}</span>
+      <AuthCardTemplate />
+      <div class="auth-register">
+        <div class="auth-header">
+          <div class="auth-icon"></div>
+          <h2>Crear Cuenta</h2>
+          <p>Registrate en la plataforma Piedrazul</p>
         </div>
-
-        <div class="form-group">
-          <label for="email">Correo Electronico</label>
-          <input
-            id="email"
-            v-model="form.email"
-            type="email"
-            placeholder="ej. juan@ejemplo.com"
-            required
-            :disabled="isLoading"
-          />
-          <span v-if="fieldErrors.email" class="field-error">{{ fieldErrors.email }}</span>
+  
+        <div v-if="errorMessage" class="alert alert-error">
+          {{ errorMessage }}
         </div>
-
-        <div class="form-group">
-          <label for="username">Usuario</label>
-          <input
-            id="username"
-            v-model="form.username"
-            type="text"
-            placeholder="ej. juanperez"
-            required
-            autocomplete="username"
-            :disabled="isLoading"
-          />
-          <span v-if="fieldErrors.username" class="field-error">{{ fieldErrors.username }}</span>
+  
+        <div v-if="successMessage" class="alert alert-success">
+          {{ successMessage }}
         </div>
-
-        <div class="form-group">
-          <label for="password">Contraseña</label>
-          <input
-            id="password"
-            v-model="form.password"
-            type="password"
-            placeholder="••••••••"
-            required
-            autocomplete="new-password"
-            :disabled="isLoading"
-          />
-          <span v-if="fieldErrors.password" class="field-error">{{ fieldErrors.password }}</span>
+  
+        <form @submit.prevent="handleSubmit" class="auth-form">
+          <div class="form-group">
+            <label for="fullName">Nombre Completo</label>
+            <input
+              id="fullName"
+              v-model="form.fullName"
+              type="text"
+              placeholder="ej. Juan Perez"
+              required
+              :disabled="isLoading"
+            />
+            <span v-if="fieldErrors.fullName" class="field-error">{{ fieldErrors.fullName }}</span>
+          </div>
+  
+          <div class="form-group">
+            <label for="email">Correo Electronico</label>
+            <input
+              id="email"
+              v-model="form.email"
+              type="email"
+              placeholder="ej. juan@ejemplo.com"
+              required
+              :disabled="isLoading"
+            />
+            <span v-if="fieldErrors.email" class="field-error">{{ fieldErrors.email }}</span>
+          </div>
+  
+          <div class="form-group">
+            <label for="username">Usuario</label>
+            <input
+              id="username"
+              v-model="form.username"
+              type="text"
+              placeholder="ej. juanperez"
+              required
+              autocomplete="username"
+              :disabled="isLoading"
+            />
+            <span v-if="fieldErrors.username" class="field-error">{{ fieldErrors.username }}</span>
+          </div>
+  
+          <div class="form-group">
+            <label for="password">Contraseña</label>
+            <input
+              id="password"
+              v-model="form.password"
+              type="password"
+              placeholder="••••••••"
+              required
+              autocomplete="new-password"
+              :disabled="isLoading"
+            />
+            <span v-if="fieldErrors.password" class="field-error">{{ fieldErrors.password }}</span>
+          </div>
+  
+          <button type="submit" class="btn-submit" :disabled="isLoading">
+            <span v-if="isLoading" class="spinner"></span>
+            <span v-else>Registrarse</span>
+          </button>
+        </form>
+  
+        <div class="auth-footer">
+          <p>
+            ¿Ya tienes una cuenta?
+            <router-link to="/login">Inicia sesion</router-link>
+          </p>
         </div>
-
-        <button type="submit" class="btn-submit" :disabled="isLoading">
-          <span v-if="isLoading" class="spinner"></span>
-          <span v-else>Registrarse</span>
-        </button>
-      </form>
-
-      <div class="auth-footer">
-        <p>
-          ¿Ya tienes una cuenta?
-          <router-link to="/login">Inicia sesion</router-link>
-        </p>
       </div>
     </div>
   </div>
@@ -148,13 +152,27 @@ async function handleSubmit() {
 }
 
 .auth-card {
+   width: 900px;
+  max-width: 100%;
+  min-height: 550px;
+
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+
   background: white;
-  border-radius: 16px;
-  padding: 2.5rem;
-  width: 100%;
-  max-width: 440px;
-  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  overflow: hidden;
+
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+}
+
+.auth-register {
+  background: #ffffff;
+  padding: 50px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .auth-header {
@@ -227,7 +245,7 @@ async function handleSubmit() {
 }
 
 .form-group input:focus {
-  border-color: #2563eb;
+  border-color: #4d1d93;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
@@ -240,7 +258,7 @@ async function handleSubmit() {
 .btn-submit {
   margin-top: 0.5rem;
   padding: 0.85rem;
-  background: #2563eb;
+  background: #7c3aed;
   color: white;
   border: none;
   border-radius: 8px;
@@ -254,7 +272,7 @@ async function handleSubmit() {
 }
 
 .btn-submit:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: #4d2785;
 }
 
 .btn-submit:disabled {
@@ -285,7 +303,7 @@ async function handleSubmit() {
 }
 
 .auth-footer a {
-  color: #2563eb;
+  color: #4d1d93;
   text-decoration: none;
   font-weight: 600;
 }

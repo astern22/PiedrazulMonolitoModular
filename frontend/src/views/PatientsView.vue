@@ -375,7 +375,7 @@ onMounted(() => {
 .header-badge {
   display: inline-block;
   background: #eff6ff;
-  color: #2563eb;
+  color: #4d1d93;
   font-size: 0.75rem;
   font-weight: 700;
   padding: 0.2rem 0.6rem;
@@ -421,7 +421,7 @@ onMounted(() => {
 }
 
 .form-card {
-  border-left: 4px solid #2563eb;
+  border-left: 4px solid #4d1d93;
 }
 
 .form-card-header {
@@ -480,7 +480,7 @@ onMounted(() => {
 }
 
 .form-group input:focus {
-  border-color: #2563eb;
+  border-color: #4d1d93;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
@@ -533,7 +533,7 @@ onMounted(() => {
 }
 
 .search-input:focus {
-  border-color: #2563eb;
+  border-color: #4d1d93;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
@@ -658,12 +658,12 @@ onMounted(() => {
 
 .btn-edit {
   background: #eff6ff;
-  color: #2563eb;
+  color: #4d1d93;
   border-color: #bfdbfe;
 }
 
 .btn-edit:hover {
-  background: #2563eb;
+  background: #4d1d93;
   color: white;
 }
 
@@ -693,12 +693,12 @@ onMounted(() => {
 }
 
 .btn-primary {
-  background: #2563eb;
+  background: #4d1d93;
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: #4d2785;
 }
 
 .btn-secondary {
@@ -765,7 +765,7 @@ onMounted(() => {
 .spinner-large {
   width: 32px;
   height: 32px;
-  border: 3px solid #2563eb;
+  border: 3px solid #4d1d93;
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;

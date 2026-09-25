@@ -66,7 +66,7 @@ const { user, isAuthenticated, canManage, canManagePatients, hasAnyRole } = useA
 .hero-badge {
   display: inline-block;
   background: #eff6ff;
-  color: #2563eb;
+  color: #4d1d93;
   padding: 0.35rem 1rem;
   border-radius: 9999px;
   font-size: 0.85rem;
@@ -137,7 +137,7 @@ const { user, isAuthenticated, canManage, canManagePatients, hasAnyRole } = useA
 }
 
 .btn-primary {
-  background: #2563eb;
+  background: #4d1d93;
   color: white;
 }
 
