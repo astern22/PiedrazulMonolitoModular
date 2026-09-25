@@ -150,7 +150,7 @@ function handleLogout() {
 body {
   margin: 0;
   font-family: "IBM Plex Sans Thai", sans-serif;
-  background-color: #f8fafc;
+  background-color: #f5f3ff;
   color: #1e293b;
   -webkit-font-smoothing: antialiased;
 }
@@ -198,7 +198,7 @@ body {
   font-size: 1.25rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: #1e3a8a;
+  color: #2f0968;
 }
 
 .brand-subtitle {
@@ -206,7 +206,7 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   background: #eff6ff;
-  color: #2563eb;
+  color: #4d1d93;
   padding: 0.15rem 0.4rem;
   border-radius: 4px;
 }
@@ -228,12 +228,12 @@ body {
 }
 
 .nav-item:hover {
-  color: #1e3a8a;
+  color: #2f0968;
   background: #f1f5f9;
 }
 
 .nav-item.router-link-exact-active {
-  color: #2563eb;
+  color: #4d1d93;
   background: #eff6ff;
   font-weight: 600;
 }
@@ -285,12 +285,12 @@ body {
 }
 
 .btn-register {
-  background: #2563eb;
+  background: #4d1d93;
   color: white;
 }
 
 .btn-register:hover {
-  background: #1d4ed8;
+  background: #4d2785;
 }
 
 .btn-logout {
@@ -356,7 +356,7 @@ body {
   border: 1px solid #cbd5e1;
   border-radius: 9999px;
   background: #f8fafc;
-  color: #1e3a8a;
+  color: #2f0968;
   font-size: 0.85rem;
   font-weight: 700;
   line-height: 1;
@@ -366,7 +366,7 @@ body {
 
 .accessibility-btn:hover:not(:disabled) {
   background: #eff6ff;
-  border-color: #2563eb;
+  border-color: #4d1d93;
 }
 
 .accessibility-btn:disabled {
@@ -375,12 +375,12 @@ body {
 }
 
 .accessibility-reset {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: #4d1d93;
+  border-color: #4d1d93;
   color: white;
 }
 
 .accessibility-reset:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: #4d2785;
 }
 </style>

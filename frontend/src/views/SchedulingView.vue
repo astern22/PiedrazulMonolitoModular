@@ -424,7 +424,7 @@ onMounted(() => {
 
 .form-group input:focus,
 .form-group select:focus {
-  border-color: #2563eb;
+  border-color: #4d1d93;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
@@ -455,12 +455,12 @@ onMounted(() => {
 }
 
 .btn-primary {
-  background: #2563eb;
+  background: #4d1d93;
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: #4d2785;
 }
 
 .btn-danger-xs {
@@ -525,7 +525,7 @@ onMounted(() => {
 }
 
 .availability-item .hours {
-  color: #2563eb;
+  color: #4d1d93;
   font-family: monospace;
   font-weight: 600;
   margin-left: 0.4rem;
@@ -597,7 +597,7 @@ onMounted(() => {
 .spinner-small {
   width: 20px;
   height: 20px;
-  border: 2px solid #2563eb;
+  border: 2px solid #4d1d93;
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
@@ -607,7 +607,7 @@ onMounted(() => {
 .spinner-large {
   width: 28px;
   height: 28px;
-  border: 3px solid #2563eb;
+  border: 3px solid #4d1d93;
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
