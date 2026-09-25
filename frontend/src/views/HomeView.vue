@@ -13,12 +13,6 @@ const { user, isAuthenticated, canManage, canManagePatients, hasAnyRole } = useA
         con autenticacion segura.
       </p>
 
-      <div v-if="isAuthenticated" class="welcome-banner">
-        <div>
-          <h3>¡Bienvenido de nuevo, {{ user?.username }}!</h3>
-        </div>
-      </div>
-
       <div class="action-buttons">
         <router-link v-if="!isAuthenticated" to="/login" class="btn btn-primary">
           Iniciar Sesion
@@ -90,34 +84,8 @@ const { user, isAuthenticated, canManage, canManagePatients, hasAnyRole } = useA
   line-height: 1.6;
 }
 
-.welcome-banner {
-  display: flex;
-  align-items: center !important;
-  text-align: center !important;
-  gap: 1rem;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: 12px;
-  padding: 1rem 1.5rem;
-  max-width: 500px;
-  margin: 0 auto 2rem;
-  text-align: left;
-}
-
 .avatar-icon {
   font-size: 2rem;
-}
-
-.welcome-banner h3 {
-  margin: 0 0 0.25rem;
-  font-size: 1rem;
-  color: #166534;
-}
-
-.welcome-banner p {
-  margin: 0;
-  font-size: 0.85rem;
-  color: #15803d;
 }
 
 .action-buttons {

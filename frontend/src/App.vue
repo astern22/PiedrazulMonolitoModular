@@ -174,7 +174,6 @@ body {
 }
 
 .nav-container {
-  max-width: 1200px;
   margin: 0 auto;
   padding: 0.85rem 1.5rem;
   display: flex;
