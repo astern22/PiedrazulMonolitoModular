@@ -1,7 +1,11 @@
 package co.edu.unicauca.piedrazul.security;
 
+import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.Date;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -35,5 +39,34 @@ class JwtServiceTest {
         assertFalse(jwtService.isTokenValid(token, "otro_usuario"));
         assertFalse(jwtService.isTokenExpired(token));
     }
-}
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void testGenerateTokenWithRoles() {
+        String username = "doctor_juan";
+        List<String> roles = List.of("ROLE_ADMIN", "ROLE_DOCTOR");
+
+        String token = jwtService.generateToken(username, roles);
+
+        assertNotNull(token);
+        assertEquals(username, jwtService.extractUsername(token));
+
+        Claims claims = jwtService.extractAllClaims(token);
+        assertNotNull(claims);
+        List<String> extractedRoles = claims.get("roles", List.class);
+        assertNotNull(extractedRoles);
+        assertEquals(2, extractedRoles.size());
+        assertTrue(extractedRoles.contains("ROLE_ADMIN"));
+        assertTrue(extractedRoles.contains("ROLE_DOCTOR"));
+    }
+
+    @Test
+    void testExtractExpiration() {
+        String username = "patient_maria";
+        String token = jwtService.generateToken(username);
+
+        Date expiration = jwtService.extractExpiration(token);
+        assertNotNull(expiration);
+        assertTrue(expiration.after(new Date()));
+    }
+}
