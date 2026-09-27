@@ -24,33 +24,25 @@ public class AppointmentController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<AppointmentResponse> createAppointment(
-            @Valid @RequestBody AppointmentRequest request) {
+        public ResponseEntity<?> createAppointment(@Valid @RequestBody AppointmentRequest request) {
+            try {
+                CreateAppointmentCommand command = new CreateAppointmentCommand(
+                    request.patientId(), request.professionalId(), request.appointmentDate(),
+                    request.startTime(), request.endTime());
 
-        CreateAppointmentCommand command =
-                new CreateAppointmentCommand(
-                        request.patientId(),
-                        request.professionalId(),
-                        request.appointmentDate(),
-                        request.startTime(),
-                        request.endTime()
-                );
+                AppointmentEntity createdAppointment = service.createAppointment(command);
 
-        AppointmentEntity createdAppointment =
-                service.createAppointment(command);
+                AppointmentResponse response = new AppointmentResponse(
+                    createdAppointment.getId(), createdAppointment.getPatientId(),
+                    createdAppointment.getProfessionalId(), createdAppointment.getAppointmentDate(),
+                    createdAppointment.getStartTime(), createdAppointment.getEndTime(),
+                    createdAppointment.getStatus());
 
-        AppointmentResponse response = new AppointmentResponse(
-                createdAppointment.getId(),
-                createdAppointment.getPatientId(),
-                createdAppointment.getProfessionalId(),
-                createdAppointment.getAppointmentDate(),
-                createdAppointment.getStartTime(),
-                createdAppointment.getEndTime(),
-                createdAppointment.getStatus()
-        );
-
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+            }
+        }
 
     @PutMapping("/{id}")
     public ResponseEntity<AppointmentEntity> updateAppointment(@PathVariable Long id, @Valid @RequestBody AppointmentEntity appointment) {
@@ -97,6 +89,11 @@ public class AppointmentController {
     public ResponseEntity<List<AppointmentEntity>> getAllAppointments() {
         List<AppointmentEntity> appointments = service.getAllAppointments();
         return ResponseEntity.ok(appointments);
+    }
+
+    @GetMapping("/patient/{patientId}")
+    public ResponseEntity<List<AppointmentEntity>> getAppointmentsByPatientId(@PathVariable Long patientId) {
+        return ResponseEntity.ok(service.getAppointmentsByPatientId(patientId));
     }
 
     @DeleteMapping("/{id}")

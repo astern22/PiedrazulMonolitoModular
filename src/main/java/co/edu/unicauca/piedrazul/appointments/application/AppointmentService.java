@@ -19,6 +19,11 @@ public class AppointmentService {
 
     public AppointmentEntity createAppointment(CreateAppointmentCommand command) {
 
+        if (command.appointmentDate().isBefore(java.time.LocalDate.now())) {
+        throw new IllegalArgumentException(
+            "No se puede agendar una cita en una fecha anterior a hoy.");
+        }
+
         AppointmentEntity appointment =
                 new AppointmentEntity();
 
@@ -68,6 +73,10 @@ public class AppointmentService {
                         professionalId,
                         date
                 );
+    }
+    
+    public List<AppointmentEntity> getAppointmentsByPatientId(Long patientId) {
+    return repository.findByPatientId(patientId);
     }
 }
 
