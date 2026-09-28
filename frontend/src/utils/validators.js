@@ -199,13 +199,11 @@ export function validateSpecialtyForm({ name }) {
 
 /**
  * Validacion de ProfessionalRequest.
- * DTO: @NotNull userId, @NotNull specialtyId, @NotBlank professionalType, @NotNull @Min(1) appointmentIntervalMinutes
- * DB: professional_type VARCHAR(20)
+ * DTO: @NotNull userId, @NotNull specialtyId, @NotNull @Min(1) appointmentIntervalMinutes
  */
 export function validateProfessionalForm({
   userId,
   specialtyId,
-  professionalType,
   appointmentIntervalMinutes,
 }) {
   return validateFields({
@@ -214,10 +212,6 @@ export function validateProfessionalForm({
       isPositiveInteger(userId, 'El ID de usuario')
     ),
     specialtyId: required(specialtyId, 'La especialidad'),
-    professionalType: firstError(
-      required(professionalType, 'El tipo de profesional'),
-      maxLength(professionalType, 20, 'El tipo de profesional')
-    ),
     appointmentIntervalMinutes: firstError(
       required(appointmentIntervalMinutes, 'La duracion de cita'),
       minValue(appointmentIntervalMinutes, 1, 'La duracion de cita'),
@@ -235,7 +229,6 @@ export function validateProfessionalRegistrationForm({
   email,
   password,
   specialtyId,
-  professionalType,
   appointmentIntervalMinutes,
 }) {
   return validateFields({
@@ -258,8 +251,33 @@ export function validateProfessionalRegistrationForm({
       minLength(password, 6, 'La contraseña')
     ),
     specialtyId: required(specialtyId, 'La especialidad'),
-    professionalType: required(professionalType, 'El tipo de profesional'),
     appointmentIntervalMinutes: validateIntervalMinutes(appointmentIntervalMinutes),
+  })
+}
+
+/**
+ * Validacion del registro de un agendador (SchedulerRegistrationRequest).
+ */
+export function validateSchedulerForm({ fullName, username, email, password }) {
+  return validateFields({
+    fullName: firstError(
+      required(fullName, 'El nombre completo'),
+      maxLength(fullName, 150, 'El nombre completo')
+    ),
+    username: firstError(
+      required(username, 'El usuario'),
+      noSpaces(username, 'El usuario'),
+      maxLength(username, 50, 'El usuario')
+    ),
+    email: firstError(
+      required(email, 'El correo electronico'),
+      isEmail(email),
+      maxLength(email, 120, 'El correo electronico')
+    ),
+    password: firstError(
+      required(password, 'La contraseña'),
+      minLength(password, 6, 'La contraseña')
+    ),
   })
 }
 

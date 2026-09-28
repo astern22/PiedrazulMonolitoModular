@@ -10,15 +10,13 @@ export const professionalService = {
    * @param {Object} data
    * @param {number} data.userId - ID del usuario asociado
    * @param {number} data.specialtyId - ID de la especialidad
-   * @param {string} data.professionalType - Tipo de profesional (ej. MEDICO_GENERAL, ESPECIALISTA)
    * @param {number} data.appointmentIntervalMinutes - Duracion de cita en minutos (ej. 20, 30)
    * @returns {Promise<Object>}
    */
-  async create({ userId, specialtyId, professionalType, appointmentIntervalMinutes }) {
+  async create({ userId, specialtyId, appointmentIntervalMinutes }) {
     const response = await apiClient.post('/api/professionals', {
       userId: Number(userId),
       specialtyId: Number(specialtyId),
-      professionalType,
       appointmentIntervalMinutes: Number(appointmentIntervalMinutes),
     })
     return response.data
@@ -32,7 +30,6 @@ export const professionalService = {
    * @param {string} data.email - Correo electronico
    * @param {string} data.password - Contrasena inicial
    * @param {number} data.specialtyId - ID de la especialidad seleccionada
-   * @param {string} data.professionalType - MEDICO o TERAPEUTA
    * @param {number} data.appointmentIntervalMinutes - Duracion de cita en minutos
    * @returns {Promise<Object>}
    */
@@ -42,7 +39,6 @@ export const professionalService = {
     email,
     password,
     specialtyId,
-    professionalType,
     appointmentIntervalMinutes,
   }) {
     const response = await apiClient.post('/api/professionals/register', {
@@ -51,7 +47,6 @@ export const professionalService = {
       email: email.trim(),
       password,
       specialtyId: Number(specialtyId),
-      professionalType,
       appointmentIntervalMinutes: Number(appointmentIntervalMinutes),
     })
     return response.data

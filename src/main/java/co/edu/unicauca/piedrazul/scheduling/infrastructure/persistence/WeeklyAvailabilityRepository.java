@@ -15,6 +15,11 @@ public interface WeeklyAvailabilityRepository
             Long professionalId
     );
 
+    List<WeeklyAvailabilityEntity> findByProfessionalIdAndDayOfWeekAndActiveTrue(
+            Long professionalId,
+            Integer dayOfWeek
+    );
+
     List<WeeklyAvailabilityEntity> findByProfessionalIdAndDayOfWeek(
             Long professionalId,
             Integer dayOfWeek

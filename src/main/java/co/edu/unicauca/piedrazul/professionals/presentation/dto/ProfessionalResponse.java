@@ -7,7 +7,7 @@ public record ProfessionalResponse(
         Long userId,
         String fullName,
         Long specialtyId,
-        String professionalType,
+        String specialtyName,
         Integer appointmentIntervalMinutes,
         Boolean active
 ) {
@@ -15,19 +15,20 @@ public record ProfessionalResponse(
     public static ProfessionalResponse fromEntity(
             ProfessionalEntity professional) {
 
-        return fromEntity(professional, null);
+        return fromEntity(professional, null, null);
     }
 
     public static ProfessionalResponse fromEntity(
             ProfessionalEntity professional,
-            String fullName) {
+            String fullName,
+            String specialtyName) {
 
         return new ProfessionalResponse(
                 professional.getId(),
                 professional.getUserId(),
                 fullName,
                 professional.getSpecialtyId(),
-                professional.getProfessionalType(),
+                specialtyName,
                 professional.getAppointmentIntervalMinutes(),
                 professional.getActive()
         );

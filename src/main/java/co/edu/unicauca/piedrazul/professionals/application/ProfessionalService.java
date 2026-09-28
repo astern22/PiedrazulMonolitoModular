@@ -17,13 +17,9 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @Service
 public class ProfessionalService {
-
-    /** Tipos de profesional que existen en el centro de medicina alternativa. */
-    public static final Set<String> ALLOWED_TYPES = Set.of("MEDICO", "TERAPEUTA");
 
     private static final int MIN_INTERVAL_MINUTES = 5;
     private static final int MAX_INTERVAL_MINUTES = 480;
@@ -62,9 +58,6 @@ public class ProfessionalService {
 
         professional.setUserId(request.userId());
         professional.setSpecialtyId(request.specialtyId());
-        professional.setProfessionalType(
-                request.professionalType()
-        );
         professional.setAppointmentIntervalMinutes(
                 request.appointmentIntervalMinutes()
         );
@@ -78,13 +71,6 @@ public class ProfessionalService {
      */
     @Transactional
     public ProfessionalEntity register(ProfessionalRegistrationRequest request) {
-
-        String type = request.professionalType().trim().toUpperCase();
-        if (!ALLOWED_TYPES.contains(type)) {
-            throw new IllegalArgumentException(
-                    "El tipo de profesional debe ser MEDICO o TERAPEUTA"
-            );
-        }
 
         if (!specialtyRepository.existsById(request.specialtyId())) {
             throw new IllegalArgumentException(
@@ -125,7 +111,6 @@ public class ProfessionalService {
         ProfessionalEntity professional = new ProfessionalEntity();
         professional.setUserId(savedUser.getId());
         professional.setSpecialtyId(request.specialtyId());
-        professional.setProfessionalType(type);
         professional.setAppointmentIntervalMinutes(
                 request.appointmentIntervalMinutes()
         );
@@ -169,6 +154,22 @@ public class ProfessionalService {
 
         userRepository.findAllById(userIds)
                 .forEach(user -> names.put(user.getId(), user.getFullName()));
+
+        return names;
+    }
+
+    /**
+     * Devuelve el nombre de las especialidades indicadas, indexado por id de especialidad.
+     */
+    public Map<Long, String> findSpecialtyNamesByIds(Collection<Long> specialtyIds) {
+        Map<Long, String> names = new HashMap<>();
+
+        if (specialtyIds == null || specialtyIds.isEmpty()) {
+            return names;
+        }
+
+        specialtyRepository.findAllById(specialtyIds)
+                .forEach(specialty -> names.put(specialty.getId(), specialty.getName()));
 
         return names;
     }

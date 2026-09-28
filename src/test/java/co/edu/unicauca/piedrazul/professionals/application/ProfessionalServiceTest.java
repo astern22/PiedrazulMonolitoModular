@@ -53,14 +53,13 @@ class ProfessionalServiceTest {
         sampleEntity.setId(1L);
         sampleEntity.setUserId(10L);
         sampleEntity.setSpecialtyId(2L);
-        sampleEntity.setProfessionalType("DOCTOR");
         sampleEntity.setAppointmentIntervalMinutes(30);
         sampleEntity.setActive(true);
     }
 
     @Test
     void testCreate_Success() {
-        ProfessionalRequest request = new ProfessionalRequest(10L, 2L, "DOCTOR", 30);
+        ProfessionalRequest request = new ProfessionalRequest(10L, 2L, 30);
 
         when(repository.existsByUserId(10L)).thenReturn(false);
         when(repository.save(any(ProfessionalEntity.class))).thenAnswer(i -> {
@@ -75,7 +74,6 @@ class ProfessionalServiceTest {
         assertEquals(1L, created.getId());
         assertEquals(10L, created.getUserId());
         assertEquals(2L, created.getSpecialtyId());
-        assertEquals("DOCTOR", created.getProfessionalType());
         assertEquals(30, created.getAppointmentIntervalMinutes());
         assertTrue(created.getActive());
 
@@ -84,7 +82,7 @@ class ProfessionalServiceTest {
 
     @Test
     void testCreate_UserAlreadyRegisteredAsProfessional_ThrowsException() {
-        ProfessionalRequest request = new ProfessionalRequest(10L, 2L, "DOCTOR", 30);
+        ProfessionalRequest request = new ProfessionalRequest(10L, 2L, 30);
         when(repository.existsByUserId(10L)).thenReturn(true);
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> service.create(request));
@@ -144,10 +142,10 @@ class ProfessionalServiceTest {
         verify(repository).findBySpecialtyId(2L);
     }
 
-    private ProfessionalRegistrationRequest registrationRequest(String type) {
+    private ProfessionalRegistrationRequest registrationRequest() {
         return new ProfessionalRegistrationRequest(
                 "Carlos Perez", "cperez", "cperez@piedrazul.com",
-                "secreto123", 2L, type, 30);
+                "secreto123", 2L, 30);
     }
 
     @Test
@@ -171,11 +169,10 @@ class ProfessionalServiceTest {
             return e;
         });
 
-        ProfessionalEntity created = service.register(registrationRequest("medico"));
+        ProfessionalEntity created = service.register(registrationRequest());
 
         assertEquals(7L, created.getId());
         assertEquals(55L, created.getUserId());
-        assertEquals("MEDICO", created.getProfessionalType());
         assertEquals(30, created.getAppointmentIntervalMinutes());
         assertTrue(created.getActive());
 
@@ -188,21 +185,12 @@ class ProfessionalServiceTest {
     }
 
     @Test
-    void testRegister_InvalidType_ThrowsException() {
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> service.register(registrationRequest("CARDIOLOGO")));
-
-        assertEquals("El tipo de profesional debe ser MEDICO o TERAPEUTA", ex.getMessage());
-        verify(userRepository, never()).save(any());
-    }
-
-    @Test
     void testRegister_UsernameAlreadyExists_ThrowsException() {
         when(specialtyRepository.existsById(2L)).thenReturn(true);
         when(userRepository.existsByUsername("cperez")).thenReturn(true);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> service.register(registrationRequest("MEDICO")));
+                () -> service.register(registrationRequest()));
 
         assertEquals("El nombre de usuario ya esta en uso", ex.getMessage());
         verify(userRepository, never()).save(any());
@@ -214,7 +202,7 @@ class ProfessionalServiceTest {
         when(specialtyRepository.existsById(2L)).thenReturn(false);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> service.register(registrationRequest("TERAPEUTA")));
+                () -> service.register(registrationRequest()));
 
         assertEquals("La especialidad seleccionada no existe", ex.getMessage());
     }
