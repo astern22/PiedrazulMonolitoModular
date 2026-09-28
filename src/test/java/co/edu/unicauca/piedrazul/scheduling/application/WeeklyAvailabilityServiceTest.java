@@ -137,4 +137,46 @@ class WeeklyAvailabilityServiceTest {
         assertEquals("Disponibilidad no encontrada", ex.getMessage());
         verify(repository, never()).save(any());
     }
+
+    @Test
+    void testCreate_OverlappingRange_ThrowsException() {
+        when(repository.findByProfessionalIdAndDayOfWeek(10L, 1))
+                .thenReturn(List.of(sampleEntity));
+
+        WeeklyAvailabilityRequest request = new WeeklyAvailabilityRequest(
+                10L, 1, LocalTime.of(9, 0), LocalTime.of(13, 0));
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> service.create(request));
+
+        assertEquals(
+                "El horario se cruza con otro ya registrado el lunes (08:00 - 12:00)",
+                ex.getMessage());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void testCreate_ContiguousRange_IsAllowed() {
+        when(repository.findByProfessionalIdAndDayOfWeek(10L, 1))
+                .thenReturn(List.of(sampleEntity));
+        when(repository.save(any(WeeklyAvailabilityEntity.class))).thenAnswer(i -> i.getArgument(0));
+
+        WeeklyAvailabilityRequest request = new WeeklyAvailabilityRequest(
+                10L, 1, LocalTime.of(12, 0), LocalTime.of(14, 0));
+
+        assertNotNull(service.create(request));
+        verify(repository).save(any(WeeklyAvailabilityEntity.class));
+    }
+
+    @Test
+    void testCreate_InactiveOverlap_IsIgnored() {
+        sampleEntity.setActive(false);
+        when(repository.findByProfessionalIdAndDayOfWeek(10L, 1))
+                .thenReturn(List.of(sampleEntity));
+        when(repository.save(any(WeeklyAvailabilityEntity.class))).thenAnswer(i -> i.getArgument(0));
+
+        WeeklyAvailabilityRequest request = new WeeklyAvailabilityRequest(
+                10L, 1, LocalTime.of(9, 0), LocalTime.of(11, 0));
+
+        assertNotNull(service.create(request));
+    }
 }

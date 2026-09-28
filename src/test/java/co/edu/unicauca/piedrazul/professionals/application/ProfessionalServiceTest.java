@@ -2,6 +2,13 @@ package co.edu.unicauca.piedrazul.professionals.application;
 
 import co.edu.unicauca.piedrazul.professionals.infrastructure.persistence.ProfessionalEntity;
 import co.edu.unicauca.piedrazul.professionals.infrastructure.persistence.ProfessionalRepository;
+import co.edu.unicauca.piedrazul.professionals.infrastructure.persistence.SpecialtyRepository;
+import co.edu.unicauca.piedrazul.professionals.presentation.dto.ProfessionalRegistrationRequest;
+import co.edu.unicauca.piedrazul.users.infrastructure.persistence.RoleEntity;
+import co.edu.unicauca.piedrazul.users.infrastructure.persistence.RoleRepository;
+import co.edu.unicauca.piedrazul.users.infrastructure.persistence.UserEntity;
+import co.edu.unicauca.piedrazul.users.infrastructure.persistence.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import co.edu.unicauca.piedrazul.professionals.presentation.dto.ProfessionalRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +29,18 @@ class ProfessionalServiceTest {
 
     @Mock
     private ProfessionalRepository repository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private RoleRepository roleRepository;
+
+    @Mock
+    private SpecialtyRepository specialtyRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private ProfessionalService service;
@@ -123,5 +142,110 @@ class ProfessionalServiceTest {
         assertEquals(1, list.size());
         assertEquals(2L, list.getFirst().getSpecialtyId());
         verify(repository).findBySpecialtyId(2L);
+    }
+
+    private ProfessionalRegistrationRequest registrationRequest(String type) {
+        return new ProfessionalRegistrationRequest(
+                "Carlos Perez", "cperez", "cperez@piedrazul.com",
+                "secreto123", 2L, type, 30);
+    }
+
+    @Test
+    void testRegister_CreatesUserWithProfessionalRoleAndProfessional() {
+        RoleEntity role = new RoleEntity();
+        role.setName("PROFESSIONAL");
+
+        when(specialtyRepository.existsById(2L)).thenReturn(true);
+        when(userRepository.existsByUsername("cperez")).thenReturn(false);
+        when(userRepository.existsByEmail("cperez@piedrazul.com")).thenReturn(false);
+        when(roleRepository.findByName("PROFESSIONAL")).thenReturn(Optional.of(role));
+        when(passwordEncoder.encode("secreto123")).thenReturn("hash");
+        when(userRepository.save(any(UserEntity.class))).thenAnswer(i -> {
+            UserEntity u = i.getArgument(0);
+            u.setId(55L);
+            return u;
+        });
+        when(repository.save(any(ProfessionalEntity.class))).thenAnswer(i -> {
+            ProfessionalEntity e = i.getArgument(0);
+            e.setId(7L);
+            return e;
+        });
+
+        ProfessionalEntity created = service.register(registrationRequest("medico"));
+
+        assertEquals(7L, created.getId());
+        assertEquals(55L, created.getUserId());
+        assertEquals("MEDICO", created.getProfessionalType());
+        assertEquals(30, created.getAppointmentIntervalMinutes());
+        assertTrue(created.getActive());
+
+        org.mockito.ArgumentCaptor<UserEntity> captor =
+                org.mockito.ArgumentCaptor.forClass(UserEntity.class);
+        verify(userRepository).save(captor.capture());
+        assertEquals("Carlos Perez", captor.getValue().getFullName());
+        assertEquals("hash", captor.getValue().getPassword());
+        assertTrue(captor.getValue().getRoles().contains(role));
+    }
+
+    @Test
+    void testRegister_InvalidType_ThrowsException() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.register(registrationRequest("CARDIOLOGO")));
+
+        assertEquals("El tipo de profesional debe ser MEDICO o TERAPEUTA", ex.getMessage());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void testRegister_UsernameAlreadyExists_ThrowsException() {
+        when(specialtyRepository.existsById(2L)).thenReturn(true);
+        when(userRepository.existsByUsername("cperez")).thenReturn(true);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.register(registrationRequest("MEDICO")));
+
+        assertEquals("El nombre de usuario ya esta en uso", ex.getMessage());
+        verify(userRepository, never()).save(any());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void testRegister_SpecialtyNotFound_ThrowsException() {
+        when(specialtyRepository.existsById(2L)).thenReturn(false);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.register(registrationRequest("TERAPEUTA")));
+
+        assertEquals("La especialidad seleccionada no existe", ex.getMessage());
+    }
+
+    @Test
+    void testUpdateAppointmentInterval_Success() {
+        when(repository.findById(1L)).thenReturn(Optional.of(sampleEntity));
+        when(repository.save(any(ProfessionalEntity.class))).thenAnswer(i -> i.getArgument(0));
+
+        ProfessionalEntity updated = service.updateAppointmentInterval(1L, 45);
+
+        assertEquals(45, updated.getAppointmentIntervalMinutes());
+        verify(repository).save(sampleEntity);
+    }
+
+    @Test
+    void testUpdateAppointmentInterval_OutOfRange_ThrowsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> service.updateAppointmentInterval(1L, 2));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.updateAppointmentInterval(1L, 500));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void testFindFullNamesByUserIds() {
+        UserEntity user = new UserEntity();
+        user.setId(10L);
+        user.setFullName("Carlos Perez");
+        when(userRepository.findAllById(List.of(10L))).thenReturn(List.of(user));
+
+        assertEquals("Carlos Perez", service.findFullNamesByUserIds(List.of(10L)).get(10L));
     }
 }
