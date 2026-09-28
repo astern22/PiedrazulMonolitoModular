@@ -3,11 +3,16 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { appointmentService, schedulingService, professionalService, patientService } from '@/api'
 import { useAuth } from '@/composables/useAuth'
 import { validateAppointmentForm, hasErrors } from '@/utils/validators'
+import { professionalLabel, professionalNameById } from '@/utils/professionals'
 
 const { canManage, isPatient } = useAuth()
 
 const appointments = ref([])
-const professionals = ref([])
+// Todos los profesionales (para mostrar el nombre en la tabla) y los activos (para elegir)
+const allProfessionals = ref([])
+const professionals = computed(() =>
+  allProfessionals.value.filter(prof => prof.active !== false)
+)
 const fieldErrors = ref({})
 const isLoading = ref(false)
 const isSubmitting = ref(false)
@@ -151,7 +156,7 @@ function recalculateEndTime() {
 
 async function loadProfessionals() {
   try {
-    professionals.value = await professionalService.getActive()
+    allProfessionals.value = await professionalService.getAll()
   } catch (error) {
     console.error('Error al cargar lista de profesionales:', error)
   }
@@ -226,7 +231,7 @@ function selectSlot(slot, index) {
 
 async function handleSearch() {
   if (!filter.value.professionalId || !filter.value.date) {
-    errorMessage.value = 'Para buscar, debes ingresar el ID del profesional y la fecha.'
+    errorMessage.value = 'Para buscar, selecciona el profesional y la fecha.'
     return
   }
 
@@ -413,7 +418,7 @@ onMounted(async () => {
             >
               <option value="" disabled>Selecciona profesional</option>
               <option v-for="prof in professionals" :key="prof.id" :value="prof.id">
-                Dr(a). ID #{{ prof.id }} ({{ prof.professionalType }})
+                {{ professionalLabel(prof) }}
               </option>
             </select>
             <span v-if="fieldErrors.professionalId" class="field-error">{{ fieldErrors.professionalId }}</span>
@@ -494,13 +499,13 @@ onMounted(async () => {
       <h4>Filtrar Citas por Profesional y Fecha</h4>
       <form @submit.prevent="handleSearch" class="filter-form">
         <div class="form-group">
-          <label for="filterProfId">ID Profesional</label>
-          <input
-            id="filterProfId"
-            v-model="filter.professionalId"
-            type="number"
-            placeholder="ej. 1"
-          />
+          <label for="filterProfId">Profesional</label>
+          <select id="filterProfId" v-model="filter.professionalId">
+            <option value="">Selecciona un profesional</option>
+            <option v-for="prof in professionals" :key="prof.id" :value="prof.id">
+              {{ professionalLabel(prof) }}
+            </option>
+          </select>
         </div>
         <div class="form-group">
           <label for="filterDate">Fecha</label>
@@ -554,7 +559,7 @@ onMounted(async () => {
             <tr v-for="item in appointments" :key="item.id">
               <td class="cell-id">#{{ item.id }}</td>
               <td><strong>Paciente #{{ item.patientId }}</strong></td>
-              <td>Dr(a). ID #{{ item.professionalId }}</td>
+              <td>{{ professionalNameById(allProfessionals, item.professionalId) }}</td>
               <td>{{ item.appointmentDate }}</td>
               <td>{{ item.startTime }} - {{ item.endTime }}</td>
               <td>
@@ -996,4 +1001,4 @@ onMounted(async () => {
     transform: rotate(360deg);
   }
 }
-</style>
+</style>
