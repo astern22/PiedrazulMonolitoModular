@@ -16,9 +16,6 @@ public class ProfessionalEntity {
     @Column(name = "specialty_id", nullable = false)
     private Long specialtyId;
 
-    @Column(name = "professional_type", nullable = false, length = 20)
-    private String professionalType;
-
     @Column(name = "appointment_interval_minutes", nullable = false)
     private Integer appointmentIntervalMinutes;
 
@@ -50,14 +47,6 @@ public class ProfessionalEntity {
 
     public void setSpecialtyId(Long specialtyId) {
         this.specialtyId = specialtyId;
-    }
-
-    public String getProfessionalType() {
-        return professionalType;
-    }
-
-    public void setProfessionalType(String professionalType) {
-        this.professionalType = professionalType;
     }
 
     public Integer getAppointmentIntervalMinutes() {

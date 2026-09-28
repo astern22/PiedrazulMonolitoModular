@@ -98,10 +98,17 @@ public class ProfessionalController {
                         .toList()
         );
 
+        Map<Long, String> specialtyNames = service.findSpecialtyNamesByIds(
+                professionals.stream()
+                        .map(ProfessionalEntity::getSpecialtyId)
+                        .toList()
+        );
+
         return professionals.stream()
                 .map(professional -> ProfessionalResponse.fromEntity(
                         professional,
-                        names.get(professional.getUserId())
+                        names.get(professional.getUserId()),
+                        specialtyNames.get(professional.getSpecialtyId())
                 ))
                 .toList();
     }

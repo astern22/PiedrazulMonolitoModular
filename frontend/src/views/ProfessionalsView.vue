@@ -3,11 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { professionalService, specialtyService } from '@/api'
 import { useAuth } from '@/composables/useAuth'
 import { validateProfessionalRegistrationForm, hasErrors } from '@/utils/validators'
-import {
-  PROFESSIONAL_TYPES,
-  professionalName,
-  professionalTypeLabel,
-} from '@/utils/professionals'
+import { professionalName } from '@/utils/professionals'
 
 const { canManage } = useAuth()
 
@@ -27,7 +23,6 @@ const emptyForm = () => ({
   email: '',
   password: '',
   specialtyId: '',
-  professionalType: 'MEDICO',
   appointmentIntervalMinutes: 30,
 })
 
@@ -189,20 +184,6 @@ onMounted(async () => {
           </div>
 
           <div class="form-group">
-            <label for="profType">Tipo de Profesional</label>
-            <select
-              id="profType"
-              v-model="form.professionalType"
-              :disabled="isSubmitting"
-            >
-              <option v-for="type in PROFESSIONAL_TYPES" :key="type.value" :value="type.value">
-                {{ type.label }}
-              </option>
-            </select>
-            <span v-if="fieldErrors.professionalType" class="field-error">{{ fieldErrors.professionalType }}</span>
-          </div>
-
-          <div class="form-group">
             <label for="specialtySelect">Especialidad</label>
             <select
               id="specialtySelect"
@@ -279,7 +260,6 @@ onMounted(async () => {
               <tr>
                 <th>Profesional</th>
                 <th>Especialidad</th>
-                <th>Tipo</th>
                 <th>Duracion Cita</th>
                 <th>Estado</th>
               </tr>
@@ -289,10 +269,9 @@ onMounted(async () => {
                 <td><strong>{{ professionalName(prof) }}</strong></td>
                 <td>
                   <span class="badge-specialty">
-                    {{ getSpecialtyName(prof.specialtyId) }}
+                    {{ prof.specialtyName || getSpecialtyName(prof.specialtyId) }}
                   </span>
                 </td>
-                <td>{{ professionalTypeLabel(prof.professionalType) }}</td>
                 <td>{{ prof.appointmentIntervalMinutes }} min</td>
                 <td>
                   <span class="status-badge status-active">

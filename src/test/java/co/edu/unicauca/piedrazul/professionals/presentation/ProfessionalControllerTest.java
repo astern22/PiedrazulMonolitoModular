@@ -45,7 +45,6 @@ class ProfessionalControllerTest {
         sampleEntity.setId(1L);
         sampleEntity.setUserId(10L);
         sampleEntity.setSpecialtyId(2L);
-        sampleEntity.setProfessionalType("DOCTOR");
         sampleEntity.setAppointmentIntervalMinutes(30);
         sampleEntity.setActive(true);
     }
@@ -58,7 +57,6 @@ class ProfessionalControllerTest {
                 {
                     "userId": 10,
                     "specialtyId": 2,
-                    "professionalType": "DOCTOR",
                     "appointmentIntervalMinutes": 30
                 }
                 """;
@@ -70,7 +68,6 @@ class ProfessionalControllerTest {
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.userId").value(10L))
                 .andExpect(jsonPath("$.specialtyId").value(2L))
-                .andExpect(jsonPath("$.professionalType").value("DOCTOR"))
                 .andExpect(jsonPath("$.appointmentIntervalMinutes").value(30))
                 .andExpect(jsonPath("$.active").value(true));
     }
@@ -101,8 +98,7 @@ class ProfessionalControllerTest {
 
         mockMvc.perform(get("/api/professionals/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1L))
-                .andExpect(jsonPath("$.professionalType").value("DOCTOR"));
+                .andExpect(jsonPath("$.id").value(1L));
     }
 
     @Test
@@ -128,7 +124,6 @@ class ProfessionalControllerTest {
                     "email": "cperez@piedrazul.com",
                     "password": "secreto123",
                     "specialtyId": 2,
-                    "professionalType": "MEDICO",
                     "appointmentIntervalMinutes": 30
                 }
                 """;

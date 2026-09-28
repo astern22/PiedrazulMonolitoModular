@@ -32,10 +32,6 @@ public record ProfessionalRegistrationRequest(
         @NotNull
         Long specialtyId,
 
-        @NotBlank
-        @Size(max = 20)
-        String professionalType,
-
         @NotNull
         @Min(5)
         @Max(480)
