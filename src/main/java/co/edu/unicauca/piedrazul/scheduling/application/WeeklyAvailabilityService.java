@@ -5,6 +5,7 @@ import co.edu.unicauca.piedrazul.scheduling.infrastructure.persistence.WeeklyAva
 import co.edu.unicauca.piedrazul.scheduling.presentation.dto.WeeklyAvailabilityRequest;
 import org.springframework.stereotype.Service;
 
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
@@ -26,6 +27,8 @@ public class WeeklyAvailabilityService {
                     "La hora de inicio debe ser anterior a la hora de finalizacion"
             );
         }
+
+        validateNoOverlap(request);
 
         WeeklyAvailabilityEntity availability =
                 new WeeklyAvailabilityEntity();
@@ -82,5 +85,44 @@ public class WeeklyAvailabilityService {
         availability.setActive(false);
 
         repository.save(availability);
+    }
+
+    private static final DateTimeFormatter HOUR_FORMAT =
+            DateTimeFormatter.ofPattern("HH:mm");
+
+    private static final String[] DAY_NAMES = {
+            "lunes", "martes", "miercoles", "jueves",
+            "viernes", "sabado", "domingo"
+    };
+
+    /**
+     * Impide registrar un rango que se cruce con otro activo del mismo
+     * profesional y del mismo dia (rangos contiguos como 08-12 y 12-14 si se permiten).
+     */
+    private void validateNoOverlap(WeeklyAvailabilityRequest request) {
+        List<WeeklyAvailabilityEntity> existing =
+                repository.findByProfessionalIdAndDayOfWeek(
+                        request.professionalId(),
+                        request.dayOfWeek()
+                );
+
+        for (WeeklyAvailabilityEntity other : existing) {
+            if (!Boolean.TRUE.equals(other.getActive())) {
+                continue;
+            }
+
+            boolean overlaps =
+                    request.startTime().isBefore(other.getEndTime())
+                            && request.endTime().isAfter(other.getStartTime());
+
+            if (overlaps) {
+                throw new IllegalArgumentException(
+                        "El horario se cruza con otro ya registrado el "
+                                + DAY_NAMES[request.dayOfWeek() - 1]
+                                + " (" + other.getStartTime().format(HOUR_FORMAT)
+                                + " - " + other.getEndTime().format(HOUR_FORMAT) + ")"
+                );
+            }
+        }
     }
 }
