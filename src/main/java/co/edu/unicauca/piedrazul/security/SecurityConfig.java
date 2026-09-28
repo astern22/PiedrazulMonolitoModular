@@ -27,6 +27,9 @@ public class SecurityConfig {
                                         "/auth/**"
                                 )
                                 .permitAll()
+                                // Solo el administrador gestiona cuentas internas (agendadores)
+                                .requestMatchers("/api/users/**")
+                                .hasRole("ADMIN")
                                 .anyRequest()
                                 .authenticated()
                 )

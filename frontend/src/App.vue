@@ -67,6 +67,9 @@ function handleLogout() {
             <router-link v-if="canManage" to="/professionals" class="nav-item">
               Profesionales
             </router-link>
+            <router-link v-if="hasAnyRole(['ADMIN'])" to="/users" class="nav-item">
+              Usuarios
+            </router-link>
             <router-link
               v-if="hasAnyRole(['ADMIN', 'SCHEDULER', 'PROFESSIONAL'])"
               to="/scheduling"
