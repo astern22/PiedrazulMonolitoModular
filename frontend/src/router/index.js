@@ -9,6 +9,7 @@ import AppointmentsView from '@/views/AppointmentsView.vue'
 import ProfessionalsView from '@/views/ProfessionalsView.vue'
 import SchedulingView from '@/views/SchedulingView.vue'
 import PatientsView from '@/views/PatientsView.vue'
+import UsersView from '@/views/UsersView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -59,6 +60,16 @@ const router = createRouter({
         requiresAuth: true,
         roles: ['ADMIN', 'SCHEDULER'],
         title: 'Profesionales - Piedrazul',
+      },
+    },
+    {
+      path: '/users',
+      name: 'users',
+      component: UsersView,
+      meta: {
+        requiresAuth: true,
+        roles: ['ADMIN'],
+        title: 'Usuarios - Piedrazul',
       },
     },
     {
