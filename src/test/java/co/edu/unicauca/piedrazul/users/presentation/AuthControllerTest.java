@@ -7,6 +7,7 @@ import co.edu.unicauca.piedrazul.users.presentation.dto.RegisterRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -16,6 +17,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -53,7 +56,8 @@ class AuthControllerTest {
                     "username": "juanperez",
                     "password": "Password123!",
                     "fullName": "Juan Perez",
-                    "email": "juan@example.com"
+                    "email": "juan@example.com",
+                    "documentNumber": "1061789234"
                 }
                 """;
 
@@ -62,6 +66,10 @@ class AuthControllerTest {
                         .content(jsonRequest))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("juanperez"));
+
+        ArgumentCaptor<RegisterRequest> captor = ArgumentCaptor.forClass(RegisterRequest.class);
+        verify(registerUserService).register(captor.capture());
+        assertEquals("1061789234", captor.getValue().documentNumber());
     }
 
     @Test

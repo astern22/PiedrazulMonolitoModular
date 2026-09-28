@@ -46,10 +46,11 @@ class AppointmentServiceTest {
 
     @Test
     void testCreateAppointment() {
+        LocalDate futureDate = LocalDate.now().plusDays(10);
         CreateAppointmentCommand command = new CreateAppointmentCommand(
                 10L,
                 20L,
-                LocalDate.of(2026, 10, 15),
+                futureDate,
                 LocalTime.of(9, 0),
                 LocalTime.of(10, 0)
         );
@@ -67,13 +68,49 @@ class AppointmentServiceTest {
         assertEquals(10L, created.getPatientId());
         assertEquals(20L, created.getProfessionalId());
         assertEquals("SCHEDULED", created.getStatus());
-        assertEquals(LocalDate.of(2026, 10, 15), created.getAppointmentDate());
+        assertEquals(futureDate, created.getAppointmentDate());
         assertEquals(LocalTime.of(9, 0), created.getStartTime());
         assertEquals(LocalTime.of(10, 0), created.getEndTime());
 
         ArgumentCaptor<AppointmentEntity> captor = ArgumentCaptor.forClass(AppointmentEntity.class);
         verify(repository).save(captor.capture());
         assertEquals("SCHEDULED", captor.getValue().getStatus());
+    }
+
+    @Test
+    void testCreateAppointment_TodayIsAllowed() {
+        CreateAppointmentCommand command = new CreateAppointmentCommand(
+                10L, 20L, LocalDate.now(), LocalTime.of(9, 0), LocalTime.of(10, 0));
+
+        when(repository.save(any(AppointmentEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AppointmentEntity created = service.createAppointment(command);
+
+        assertEquals(LocalDate.now(), created.getAppointmentDate());
+        verify(repository).save(any(AppointmentEntity.class));
+    }
+
+    @Test
+    void testCreateAppointment_PastDate_ThrowsException() {
+        CreateAppointmentCommand command = new CreateAppointmentCommand(
+                10L, 20L, LocalDate.now().minusDays(1), LocalTime.of(9, 0), LocalTime.of(10, 0));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> service.createAppointment(command));
+
+        assertEquals("No se puede agendar una cita en una fecha anterior a hoy.", exception.getMessage());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void testGetAppointmentsByPatientId() {
+        when(repository.findByPatientId(10L)).thenReturn(List.of(sampleEntity));
+
+        List<AppointmentEntity> results = service.getAppointmentsByPatientId(10L);
+
+        assertEquals(1, results.size());
+        assertEquals(10L, results.getFirst().getPatientId());
+        verify(repository).findByPatientId(10L);
     }
 
     @Test

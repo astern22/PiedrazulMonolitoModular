@@ -75,6 +75,53 @@ class AppointmentControllerTest {
     }
 
     @Test
+    void testCreateAppointment_PastDate_ReturnsBadRequest() throws Exception {
+        when(appointmentService.createAppointment(any(CreateAppointmentCommand.class)))
+                .thenThrow(new IllegalArgumentException("No se puede agendar una cita en una fecha anterior a hoy."));
+
+        String jsonRequest = """
+                {
+                    "patientId": 10,
+                    "professionalId": 20,
+                    "appointmentDate": "2020-01-01",
+                    "startTime": "09:00:00",
+                    "endTime": "10:00:00"
+                }
+                """;
+
+        mockMvc.perform(post("/api/appointments/create")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonRequest))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("No se puede agendar una cita en una fecha anterior a hoy."));
+    }
+
+    @Test
+    void testGetAppointmentsByPatientId() throws Exception {
+        AppointmentEntity entity = new AppointmentEntity();
+        entity.setId(1L);
+        entity.setPatientId(10L);
+        entity.setProfessionalId(20L);
+        entity.setStatus("SCHEDULED");
+
+        when(appointmentService.getAppointmentsByPatientId(10L)).thenReturn(List.of(entity));
+
+        mockMvc.perform(get("/api/appointments/patient/10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1L))
+                .andExpect(jsonPath("$[0].patientId").value(10L));
+    }
+
+    @Test
+    void testGetAppointmentsByPatientId_Empty() throws Exception {
+        when(appointmentService.getAppointmentsByPatientId(99L)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/appointments/patient/99"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
     void testGetAllAppointments() throws Exception {
         AppointmentEntity entity = new AppointmentEntity();
         entity.setId(1L);
