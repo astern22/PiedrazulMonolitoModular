@@ -1,13 +1,18 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { appointmentService, schedulingService, professionalService, patientService } from '@/api'
 import { useAuth } from '@/composables/useAuth'
 import { validateAppointmentForm, hasErrors } from '@/utils/validators'
+import { professionalLabel, professionalNameById } from '@/utils/professionals'
 
 const { canManage, isPatient } = useAuth()
 
 const appointments = ref([])
-const professionals = ref([])
+// Todos los profesionales (para mostrar el nombre en la tabla) y los activos (para elegir)
+const allProfessionals = ref([])
+const professionals = computed(() =>
+  allProfessionals.value.filter(prof => prof.active !== false)
+)
 const fieldErrors = ref({})
 const isLoading = ref(false)
 const isSubmitting = ref(false)
@@ -19,10 +24,27 @@ const showCreateForm = ref(false)
 const currentPatient = ref(null)
 const isLoadingCurrentPatient = ref(false)
 
+// Busqueda de paciente por cedula (rol agendador/admin)
+const patientSearch = ref({
+  documentNumber: '',
+  result: null,
+  isSearching: false,
+  error: '',
+})
+
 // Franjas de horario disponibles
 const availableSlots = ref([])
 const isLoadingSlots = ref(false)
 const selectedSlotIndex = ref(null)
+
+const showManualTime = computed(() =>
+  form.value.professionalId &&
+  form.value.appointmentDate &&
+  !isLoadingSlots.value &&
+  availableSlots.value.length === 0
+)
+
+const todayStr = computed(() => new Date().toISOString().split('T')[0])
 
 // Formulario de nueva cita
 const form = ref({
@@ -53,10 +75,22 @@ async function loadPatientsList() {
   }
 }
 
+function resetPatientSearch() {
+  patientSearch.value = {
+    documentNumber: '',
+    result: null,
+    isSearching: false,
+    error: '',
+  }
+}
+
 function openCreateForm() {
   showCreateForm.value = true
   if (isPatient.value) {
     form.value.patientId = currentPatient.value ? currentPatient.value.id : ''
+  } else {
+    resetPatientSearch()
+    form.value.patientId = ''
   }
 }
 
@@ -64,12 +98,65 @@ function closeCreateForm() {
   showCreateForm.value = false
   if (isPatient.value) {
     form.value.patientId = currentPatient.value ? currentPatient.value.id : ''
+  } else {
+    resetPatientSearch()
+    form.value.patientId = ''
+  }
+}
+
+function onPatientDocumentChange() {
+  patientSearch.value.result = null
+  patientSearch.value.error = ''
+  form.value.patientId = ''
+}
+
+async function searchPatientByDocument() {
+  const doc = patientSearch.value.documentNumber.trim()
+  if (!doc) return
+
+  patientSearch.value.isSearching = true
+  patientSearch.value.error = ''
+  patientSearch.value.result = null
+
+  try {
+    const patient = await patientService.getByDocument(doc)
+    patientSearch.value.result = patient
+    form.value.patientId = patient.id
+  } catch (error) {
+    form.value.patientId = ''
+    patientSearch.value.error =
+      'No se encontro un paciente con ese numero de documento. Verifica el numero o registralo primero en el modulo de Pacientes.'
+  } finally {
+    patientSearch.value.isSearching = false
+  }
+}
+
+function addMinutesToTime(time, minutes) {
+  if (!time || !minutes) return time
+  const [h, m] = time.split(':').map(Number)
+  if (Number.isNaN(h) || Number.isNaN(m)) return time
+  const totalMinutes = h * 60 + m + Number(minutes)
+  const wrapped = ((totalMinutes % 1440) + 1440) % 1440
+  const hh = String(Math.floor(wrapped / 60)).padStart(2, '0')
+  const mm = String(wrapped % 60).padStart(2, '0')
+  return `${hh}:${mm}`
+}
+
+function recalculateEndTime() {
+  const professional = professionals.value.find(
+    (prof) => String(prof.id) === String(form.value.professionalId)
+  )
+  if (professional?.appointmentIntervalMinutes && form.value.startTime) {
+    form.value.endTime = addMinutesToTime(
+      form.value.startTime,
+      professional.appointmentIntervalMinutes
+    )
   }
 }
 
 async function loadProfessionals() {
   try {
-    professionals.value = await professionalService.getActive()
+    allProfessionals.value = await professionalService.getAll()
   } catch (error) {
     console.error('Error al cargar lista de profesionales:', error)
   }
@@ -79,7 +166,14 @@ async function fetchAppointments() {
   isLoading.value = true
   errorMessage.value = ''
   try {
-    appointments.value = await appointmentService.getAll()
+    // Un paciente solo debe ver SUS PROPIAS citas, nunca las de otros pacientes.
+    if (isPatient.value) {
+      appointments.value = currentPatient.value
+        ? await appointmentService.getByPatientId(currentPatient.value.id)
+        : []
+    } else {
+      appointments.value = await appointmentService.getAll()
+    }
   } catch (error) {
     errorMessage.value = error.message || 'Error al cargar las citas medicas.'
   } finally {
@@ -119,6 +213,16 @@ watch(
   }
 )
 
+// Calcula Hora Fin automaticamente io
+watch(
+  () => [form.value.professionalId, form.value.startTime],
+  () => {
+    if (showCreateForm.value) {
+      recalculateEndTime()
+    }
+  }
+)
+
 function selectSlot(slot, index) {
   selectedSlotIndex.value = index
   form.value.startTime = slot.startTime.substring(0, 5)
@@ -127,7 +231,7 @@ function selectSlot(slot, index) {
 
 async function handleSearch() {
   if (!filter.value.professionalId || !filter.value.date) {
-    errorMessage.value = 'Para buscar, debes ingresar el ID del profesional y la fecha.'
+    errorMessage.value = 'Para buscar, selecciona el profesional y la fecha.'
     return
   }
 
@@ -193,6 +297,7 @@ async function handleCreate() {
     availableSlots.value = []
     selectedSlotIndex.value = null
     showCreateForm.value = false
+    resetPatientSearch()
     await fetchAppointments()
   } catch (error) {
     errorMessage.value = error.message || 'No se pudo crear la cita medica.'
@@ -217,12 +322,13 @@ async function handleDelete(id) {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadProfessionals()
-  fetchAppointments()
+
   if (isPatient.value) {
-    loadPatientsList()
+    await loadPatientsList()
   }
+  fetchAppointments()
 })
 </script>
 
@@ -257,7 +363,7 @@ onMounted(() => {
       {{ successMessage }}
     </div>
 
-    <!-- Formulario para agendar cita (Colapsable) -->
+    <!-- Formulario para agendar cita -->
     <div v-if="showCreateForm" class="card create-card">
       <h3>Agendar Nueva Cita Medica</h3>
       <form @submit.prevent="handleCreate" novalidate>
@@ -273,16 +379,34 @@ onMounted(() => {
             </span>
           </div>
 
-          <div v-else class="form-group">
-            <label for="patientId">ID del Paciente</label>
-            <input
-              id="patientId"
-              v-model="form.patientId"
-              type="number"
-              placeholder="ej. 1"
-              :disabled="isSubmitting"
-            />
-            <span v-if="fieldErrors.patientId" class="field-error">{{ fieldErrors.patientId }}</span>
+          <div v-else class="form-group patient-search-group">
+            <label for="patientDocument">Cedula del Paciente</label>
+            <div class="patient-search-row">
+              <input
+                id="patientDocument"
+                v-model="patientSearch.documentNumber"
+                type="text"
+                placeholder="ej. 1061789234"
+                :disabled="isSubmitting"
+                @input="onPatientDocumentChange"
+                @keydown.enter.prevent="searchPatientByDocument"
+              />
+              <button
+                type="button"
+                class="btn btn-secondary btn-search"
+                @click="searchPatientByDocument"
+                :disabled="isSubmitting || patientSearch.isSearching || !patientSearch.documentNumber.trim()"
+              >
+                <span v-if="patientSearch.isSearching" class="spinner-sm"></span>
+                <span v-else>Buscar</span>
+              </button>
+            </div>
+            <span v-if="patientSearch.result" class="patient-found">
+              ✓ {{ patientSearch.result.fullName || 'Paciente sin cuenta de usuario' }} — Doc.
+              {{ patientSearch.result.documentNumber }}
+            </span>
+            <span v-else-if="patientSearch.error" class="field-error">{{ patientSearch.error }}</span>
+            <span v-else-if="fieldErrors.patientId" class="field-error">{{ fieldErrors.patientId }}</span>
           </div>
 
           <div class="form-group">
@@ -294,7 +418,7 @@ onMounted(() => {
             >
               <option value="" disabled>Selecciona profesional</option>
               <option v-for="prof in professionals" :key="prof.id" :value="prof.id">
-                Dr(a). ID #{{ prof.id }} ({{ prof.professionalType }})
+                {{ professionalLabel(prof) }}
               </option>
             </select>
             <span v-if="fieldErrors.professionalId" class="field-error">{{ fieldErrors.professionalId }}</span>
@@ -306,12 +430,13 @@ onMounted(() => {
               id="appointmentDate"
               v-model="form.appointmentDate"
               type="date"
+              :min="todayStr"
               :disabled="isSubmitting"
             />
             <span v-if="fieldErrors.appointmentDate" class="field-error">{{ fieldErrors.appointmentDate }}</span>
           </div>
 
-          <div class="form-group">
+          <div v-if="showManualTime" class="form-group">
             <label for="startTime">Hora Inicio</label>
             <input
               id="startTime"
@@ -322,7 +447,7 @@ onMounted(() => {
             <span v-if="fieldErrors.startTime" class="field-error">{{ fieldErrors.startTime }}</span>
           </div>
 
-          <div class="form-group">
+          <div v-if="showManualTime" class="form-group">
             <label for="endTime">Hora Fin</label>
             <input
               id="endTime"
@@ -330,25 +455,15 @@ onMounted(() => {
               type="time"
               :disabled="isSubmitting"
             />
+            <span class="text-muted-xs"></span>
             <span v-if="fieldErrors.endTime" class="field-error">{{ fieldErrors.endTime }}</span>
-          </div>
-
-          <div class="form-group">
-            <label for="endTime">Hora Fin</label>
-            <input
-              id="endTime"
-              v-model="form.endTime"
-              type="time"
-              required
-              :disabled="isSubmitting"
-            />
           </div>
         </div>
 
         <!-- Franjas horarias disponibles calculadas por scheduling/AvailableSlotService -->
         <div v-if="form.professionalId && form.appointmentDate" class="slots-section">
           <label class="slots-label">
-            Franjas Horarias Disponibles (Calculadas por el sistema):
+            Franjas Horarias Disponibles:
           </label>
           <div v-if="isLoadingSlots" class="slots-loading">
             <span class="spinner-sm"></span> Calculando franjas libres...
@@ -384,13 +499,13 @@ onMounted(() => {
       <h4>Filtrar Citas por Profesional y Fecha</h4>
       <form @submit.prevent="handleSearch" class="filter-form">
         <div class="form-group">
-          <label for="filterProfId">ID Profesional</label>
-          <input
-            id="filterProfId"
-            v-model="filter.professionalId"
-            type="number"
-            placeholder="ej. 1"
-          />
+          <label for="filterProfId">Profesional</label>
+          <select id="filterProfId" v-model="filter.professionalId">
+            <option value="">Selecciona un profesional</option>
+            <option v-for="prof in professionals" :key="prof.id" :value="prof.id">
+              {{ professionalLabel(prof) }}
+            </option>
+          </select>
         </div>
         <div class="form-group">
           <label for="filterDate">Fecha</label>
@@ -444,7 +559,7 @@ onMounted(() => {
             <tr v-for="item in appointments" :key="item.id">
               <td class="cell-id">#{{ item.id }}</td>
               <td><strong>Paciente #{{ item.patientId }}</strong></td>
-              <td>Dr(a). ID #{{ item.professionalId }}</td>
+              <td>{{ professionalNameById(allProfessionals, item.professionalId) }}</td>
               <td>{{ item.appointmentDate }}</td>
               <td>{{ item.startTime }} - {{ item.endTime }}</td>
               <td>
@@ -658,6 +773,30 @@ onMounted(() => {
   justify-content: center;
 }
 
+.patient-search-group {
+  min-width: 240px;
+}
+
+.patient-search-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.patient-search-row input {
+  flex: 1;
+}
+
+.btn-search {
+  padding: 0.65rem 1rem;
+  white-space: nowrap;
+}
+
+.patient-found {
+  color: #15803d;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 .patient-chip {
   display: inline-block;
   padding: 0.65rem 0.85rem;
@@ -862,4 +1001,4 @@ onMounted(() => {
     transform: rotate(360deg);
   }
 }
-</style>
+</style>

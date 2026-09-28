@@ -156,7 +156,7 @@ export function hasErrors(errors) {
  * Validacion de RegisterRequest.
  * DB: username VARCHAR(50), password VARCHAR(255), full_name VARCHAR(150), email VARCHAR(120)
  */
-export function validateRegisterForm({ username, password, fullName, email }) {
+export function validateRegisterForm({ username, password, fullName, email, documentNumber }) {
   return validateFields({
     username: firstError(
       required(username, 'El usuario'),
@@ -175,6 +175,11 @@ export function validateRegisterForm({ username, password, fullName, email }) {
       required(email, 'El correo electronico'),
       isEmail(email),
       maxLength(email, 120, 'El correo electronico')
+    ),
+    documentNumber: firstError(
+      required(documentNumber, 'El numero de documento'),
+      noSpaces(documentNumber, 'El numero de documento'),
+      maxLength(documentNumber, 20, 'El numero de documento')
     ),
   })
 }
@@ -219,6 +224,74 @@ export function validateProfessionalForm({
       maxValue(appointmentIntervalMinutes, 480, 'La duracion de cita')
     ),
   })
+}
+
+/**
+ * Validacion del registro de un profesional (cuenta de usuario + datos profesionales).
+ */
+export function validateProfessionalRegistrationForm({
+  fullName,
+  username,
+  email,
+  password,
+  specialtyId,
+  professionalType,
+  appointmentIntervalMinutes,
+}) {
+  return validateFields({
+    fullName: firstError(
+      required(fullName, 'El nombre completo'),
+      maxLength(fullName, 150, 'El nombre completo')
+    ),
+    username: firstError(
+      required(username, 'El usuario'),
+      noSpaces(username, 'El usuario'),
+      maxLength(username, 50, 'El usuario')
+    ),
+    email: firstError(
+      required(email, 'El correo electronico'),
+      isEmail(email),
+      maxLength(email, 120, 'El correo electronico')
+    ),
+    password: firstError(
+      required(password, 'La contraseña'),
+      minLength(password, 6, 'La contraseña')
+    ),
+    specialtyId: required(specialtyId, 'La especialidad'),
+    professionalType: required(professionalType, 'El tipo de profesional'),
+    appointmentIntervalMinutes: validateIntervalMinutes(appointmentIntervalMinutes),
+  })
+}
+
+/**
+ * Duracion de cita: entre 5 y 480 minutos.
+ */
+export function validateIntervalMinutes(value) {
+  return firstError(
+    required(value, 'La duracion de cita'),
+    isPositiveInteger(value, 'La duracion de cita'),
+    minValue(value, 5, 'La duracion de cita'),
+    maxValue(value, 480, 'La duracion de cita')
+  )
+}
+
+/**
+ * Busca una disponibilidad semanal existente que se cruce con el rango indicado
+ * (mismo dia). Los rangos contiguos (08:00-12:00 y 12:00-14:00) no se consideran cruce.
+ * Retorna el registro que se cruza o null.
+ */
+export function findOverlappingAvailability(existing, { dayOfWeek, startTime, endTime }) {
+  if (!startTime || !endTime) return null
+  const start = startTime.substring(0, 5)
+  const end = endTime.substring(0, 5)
+  return (
+    (existing || []).find(item => {
+      if (Number(item.dayOfWeek) !== Number(dayOfWeek)) return false
+      const itemStart = String(item.startTime).substring(0, 5)
+      const itemEnd = String(item.endTime).substring(0, 5)
+      return start < itemEnd && end > itemStart
+    }) || null
+  )
 }
 
 /**

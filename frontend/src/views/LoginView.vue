@@ -39,7 +39,7 @@ async function handleSubmit() {
   } catch (error) {
     errorMessage.value =
       error?.message ||
-      'Credenciales inválidas. Por favor verifica tus datos.'
+      'Credenciales invalidas. Por favor verifica tus datos.'
   } finally {
     isLoading.value = false
   }
@@ -54,7 +54,7 @@ async function handleSubmit() {
 
       <div class="auth-login">
         <div class="auth-header">
-          <h2>Iniciar Sesión</h2>
+          <h2>Iniciar Sesion</h2>
           <p>Ingresa tus credenciales para acceder a Piedrazul</p>
         </div>
 
@@ -112,7 +112,7 @@ async function handleSubmit() {
           <p>
             ¿No tienes una cuenta?
             <router-link to="/register">
-              Regístrate aquí
+              Registrate aqui
             </router-link>
           </p>
         </div>

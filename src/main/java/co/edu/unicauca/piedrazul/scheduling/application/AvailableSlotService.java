@@ -68,13 +68,13 @@ public class AvailableSlotService {
         int interval =
                 professional.getAppointmentIntervalMinutes();
 
-        for (WeeklyAvailabilityEntity availability : availabilities) {
+        for (LocalTime[] range : mergeOverlappingRanges(availabilities)) {
 
-            LocalTime currentTime =
-                    availability.getStartTime();
+            LocalTime currentTime = range[0];
+            LocalTime rangeEnd = range[1];
 
             while (!currentTime.plusMinutes(interval)
-                    .isAfter(availability.getEndTime())) {
+                    .isAfter(rangeEnd)) {
 
                 LocalTime slotStart = currentTime;
 
@@ -107,5 +107,37 @@ public class AvailableSlotService {
         }
 
         return availableSlots;
+    }
+
+    /**
+     * Une los rangos que se cruzan para no generar franjas duplicadas
+     * cuando existen horarios solapados registrados previamente.
+     */
+    private List<LocalTime[]> mergeOverlappingRanges(
+            List<WeeklyAvailabilityEntity> availabilities) {
+
+        List<WeeklyAvailabilityEntity> sorted = availabilities.stream()
+                .sorted(java.util.Comparator.comparing(WeeklyAvailabilityEntity::getStartTime))
+                .toList();
+
+        List<LocalTime[]> merged = new ArrayList<>();
+
+        for (WeeklyAvailabilityEntity availability : sorted) {
+            if (!merged.isEmpty()) {
+                LocalTime[] last = merged.get(merged.size() - 1);
+                if (availability.getStartTime().isBefore(last[1])) {
+                    if (availability.getEndTime().isAfter(last[1])) {
+                        last[1] = availability.getEndTime();
+                    }
+                    continue;
+                }
+            }
+            merged.add(new LocalTime[]{
+                    availability.getStartTime(),
+                    availability.getEndTime()
+            });
+        }
+
+        return merged;
     }
 }
