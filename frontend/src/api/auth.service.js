@@ -35,15 +35,16 @@ export const authService = {
    * @param {string} userData.email
    * @returns {Promise<{username: string}>}
    */
-  async register({ username, password, fullName, email }) {
-    const response = await apiClient.post('/auth/register', {
-      username,
-      password,
-      fullName,
-      email,
-    })
-    return response.data
-  },
+ async register({ username, password, fullName, email, documentNumber }) {
+  const response = await apiClient.post('/auth/register', {
+    username,
+    password,
+    fullName,
+    email,
+    documentNumber,
+  })
+  return response.data
+},
 
   /**
    * Cierra la sesion activa eliminando el token.

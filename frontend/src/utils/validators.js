@@ -156,7 +156,7 @@ export function hasErrors(errors) {
  * Validacion de RegisterRequest.
  * DB: username VARCHAR(50), password VARCHAR(255), full_name VARCHAR(150), email VARCHAR(120)
  */
-export function validateRegisterForm({ username, password, fullName, email }) {
+export function validateRegisterForm({ username, password, fullName, email, documentNumber }) {
   return validateFields({
     username: firstError(
       required(username, 'El usuario'),
@@ -175,6 +175,11 @@ export function validateRegisterForm({ username, password, fullName, email }) {
       required(email, 'El correo electronico'),
       isEmail(email),
       maxLength(email, 120, 'El correo electronico')
+    ),
+    documentNumber: firstError(
+      required(documentNumber, 'El numero de documento'),
+      noSpaces(documentNumber, 'El numero de documento'),
+      maxLength(documentNumber, 20, 'El numero de documento')
     ),
   })
 }
