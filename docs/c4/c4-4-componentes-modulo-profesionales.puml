@@ -16,7 +16,7 @@ Container_Boundary(api, "API REST Piedrazul") {
     Component(profSvc, "ProfessionalService", "Spring @Service", "Reglas de negocio del profesional: valida unicidad por usuario, crea profesional activo y consulta por especialidad.")
     Component(specSvc, "SpecialtyService", "Spring @Service", "Reglas de negocio de especialidad: evita duplicados por nombre (case-insensitive).")
 
-    Component(prof, "Professional", "Clase de dominio", "Entidad de dominio del profesional (userId, specialtyId, professionalType, appointmentIntervalMinutes, active).")
+    Component(prof, "Professional", "Clase de dominio", "Entidad de dominio del profesional (userId, specialtyId, appointmentIntervalMinutes, active).")
     Component(spec, "Specialty", "Clase de dominio", "Entidad de dominio de la especialidad (id, name).")
 
     Component(profEntity, "ProfessionalEntity", "JPA @Entity", "Tabla professionals.")
