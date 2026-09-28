@@ -27,6 +27,25 @@ public class WeeklyAvailabilityService {
             );
         }
 
+        // Un profesional no puede tener dos horarios que se solapen el mismo dia.
+        // Los rangos contiguos (08:00-12:00 y 12:00-14:00) son validos.
+        repository.findByProfessionalIdAndDayOfWeekAndActiveTrue(
+                        request.professionalId(),
+                        request.dayOfWeek()
+                )
+                .stream()
+                .filter(existing ->
+                        request.startTime().isBefore(existing.getEndTime())
+                                && request.endTime().isAfter(existing.getStartTime()))
+                .findFirst()
+                .ifPresent(existing -> {
+                    throw new RuntimeException(
+                            "El horario se cruza con otro ya registrado ("
+                                    + existing.getStartTime() + " - "
+                                    + existing.getEndTime() + ")"
+                    );
+                });
+
         WeeklyAvailabilityEntity availability =
                 new WeeklyAvailabilityEntity();
 

@@ -13,6 +13,7 @@ const form = ref({
   fullName: '',
   email: '',
   password: '',
+  documentNumber: '',
 })
 
 const fieldErrors = ref({})
@@ -37,6 +38,7 @@ async function handleSubmit() {
       password: form.value.password,
       fullName: form.value.fullName.trim(),
       email: form.value.email.trim(),
+      documentNumber: form.value.documentNumber.trim(),
     })
     successMessage.value = `¡Usuario "${result.username || form.value.username}" registrado con exito! Redirigiendo a inicio de sesion...`
     setTimeout(() => {
@@ -95,6 +97,19 @@ async function handleSubmit() {
               :disabled="isLoading"
             />
             <span v-if="fieldErrors.email" class="field-error">{{ fieldErrors.email }}</span>
+          </div>
+
+          <div class="form-group">
+            <label for="documentNumber">Número de Documento</label>
+            <input
+              id="documentNumber"
+              v-model="form.documentNumber"
+              type="text"
+              placeholder="ej. 1061789234"
+              required
+              :disabled="isLoading"
+            />
+            <span v-if="fieldErrors.documentNumber" class="field-error">{{ fieldErrors.documentNumber }}</span>
           </div>
   
           <div class="form-group">

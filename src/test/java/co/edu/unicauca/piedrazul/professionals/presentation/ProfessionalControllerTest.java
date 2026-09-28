@@ -17,7 +17,9 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -43,7 +45,6 @@ class ProfessionalControllerTest {
         sampleEntity.setId(1L);
         sampleEntity.setUserId(10L);
         sampleEntity.setSpecialtyId(2L);
-        sampleEntity.setProfessionalType("DOCTOR");
         sampleEntity.setAppointmentIntervalMinutes(30);
         sampleEntity.setActive(true);
     }
@@ -56,7 +57,6 @@ class ProfessionalControllerTest {
                 {
                     "userId": 10,
                     "specialtyId": 2,
-                    "professionalType": "DOCTOR",
                     "appointmentIntervalMinutes": 30
                 }
                 """;
@@ -68,7 +68,6 @@ class ProfessionalControllerTest {
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.userId").value(10L))
                 .andExpect(jsonPath("$.specialtyId").value(2L))
-                .andExpect(jsonPath("$.professionalType").value("DOCTOR"))
                 .andExpect(jsonPath("$.appointmentIntervalMinutes").value(30))
                 .andExpect(jsonPath("$.active").value(true));
     }
@@ -99,8 +98,7 @@ class ProfessionalControllerTest {
 
         mockMvc.perform(get("/api/professionals/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1L))
-                .andExpect(jsonPath("$.professionalType").value("DOCTOR"));
+                .andExpect(jsonPath("$.id").value(1L));
     }
 
     @Test
@@ -111,5 +109,42 @@ class ProfessionalControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1L))
                 .andExpect(jsonPath("$[0].specialtyId").value(2L));
+    }
+
+    @Test
+    void testRegisterProfessional_ReturnsFullName() throws Exception {
+        when(service.register(any(co.edu.unicauca.piedrazul.professionals.presentation.dto.ProfessionalRegistrationRequest.class)))
+                .thenReturn(sampleEntity);
+        when(service.findFullNamesByUserIds(any())).thenReturn(java.util.Map.of(10L, "Carlos Perez"));
+
+        String json = """
+                {
+                    "fullName": "Carlos Perez",
+                    "username": "cperez",
+                    "email": "cperez@piedrazul.com",
+                    "password": "secreto123",
+                    "specialtyId": 2,
+                    "appointmentIntervalMinutes": 30
+                }
+                """;
+
+        mockMvc.perform(post("/api/professionals/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1L))
+                .andExpect(jsonPath("$.fullName").value("Carlos Perez"));
+    }
+
+    @Test
+    void testUpdateAppointmentInterval() throws Exception {
+        sampleEntity.setAppointmentIntervalMinutes(45);
+        when(service.updateAppointmentInterval(eq(1L), eq(45))).thenReturn(sampleEntity);
+
+        mockMvc.perform(patch("/api/professionals/1/appointment-interval")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"appointmentIntervalMinutes\": 45}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.appointmentIntervalMinutes").value(45));
     }
 }

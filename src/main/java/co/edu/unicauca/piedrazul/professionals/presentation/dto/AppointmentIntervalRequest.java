@@ -1,18 +1,13 @@
 package co.edu.unicauca.piedrazul.professionals.presentation.dto;
 
-
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
-public record ProfessionalRequest(
+public record AppointmentIntervalRequest(
         @NotNull
-        Long userId,
-
-        @NotNull
-        Long specialtyId,
-
-        @NotNull
-        @Min(1)
+        @Min(5)
+        @Max(480)
         Integer appointmentIntervalMinutes
 ) {
 }

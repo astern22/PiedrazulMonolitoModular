@@ -5,6 +5,7 @@ import appointmentService from './appointment.service.js'
 import schedulingService from './scheduling.service.js'
 import professionalService from './professional.service.js'
 import patientService from './patient.service.js'
+import userService from './user.service.js'
 
 export {
   apiClient,
@@ -15,6 +16,7 @@ export {
   schedulingService as availabilityService,
   professionalService,
   patientService,
+  userService,
 }
 
 export default {
@@ -26,4 +28,5 @@ export default {
   availability: schedulingService,
   professionals: professionalService,
   patients: patientService,
+  users: userService,
 }

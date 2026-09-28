@@ -91,6 +91,11 @@ export const appointmentService = {
     const response = await apiClient.delete(`/api/appointments/${id}`)
     return response.data
   },
+
+  async getByPatientId(patientId) {
+    const response = await apiClient.get(`/api/appointments/patient/${patientId}`)
+    return response.data
+  }
 }
 
 export default appointmentService

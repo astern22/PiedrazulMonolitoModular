@@ -146,4 +146,34 @@ class AvailableSlotServiceTest {
         assertNotNull(slots);
         assertTrue(slots.isEmpty());
     }
+
+    @Test
+    void testGetAvailableSlots_OverlappingRangesAreMerged_NoDuplicateSlots() {
+        LocalDate monday = LocalDate.of(2026, 10, 12);
+
+        WeeklyAvailabilityEntity morning = new WeeklyAvailabilityEntity();
+        morning.setDayOfWeek(1);
+        morning.setStartTime(LocalTime.of(8, 0));
+        morning.setEndTime(LocalTime.of(12, 0));
+        morning.setActive(true);
+
+        WeeklyAvailabilityEntity overlapping = new WeeklyAvailabilityEntity();
+        overlapping.setDayOfWeek(1);
+        overlapping.setStartTime(LocalTime.of(9, 0));
+        overlapping.setEndTime(LocalTime.of(12, 0));
+        overlapping.setActive(true);
+
+        when(professionalRepository.findById(10L)).thenReturn(Optional.of(professional));
+        when(availabilityRepository.findByProfessionalIdAndDayOfWeek(10L, 1))
+                .thenReturn(List.of(morning, overlapping));
+        when(appointmentService.findAppointments(10L, monday))
+                .thenReturn(Collections.emptyList());
+
+        List<AvailableSlotResponse> slots = service.getAvailableSlots(10L, monday);
+
+        // 08:00 a 12:00 en bloques de 30 min = 8 franjas, sin repetir las de 09:00-12:00
+        assertEquals(8, slots.size());
+        assertEquals(LocalTime.of(8, 0), slots.get(0).startTime());
+        assertEquals(LocalTime.of(11, 30), slots.get(7).startTime());
+    }
 }

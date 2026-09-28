@@ -1,8 +1,9 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { professionalService, specialtyService } from '@/api'
 import { useAuth } from '@/composables/useAuth'
-import { validateProfessionalForm, hasErrors } from '@/utils/validators'
+import { validateProfessionalRegistrationForm, hasErrors } from '@/utils/validators'
+import { professionalName } from '@/utils/professionals'
 
 const { canManage } = useAuth()
 
@@ -14,12 +15,31 @@ const isSubmitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const filterSpecialtyId = ref('')
+const searchName = ref('')
 
-const form = ref({
-  userId: '',
+const emptyForm = () => ({
+  fullName: '',
+  username: '',
+  email: '',
+  password: '',
   specialtyId: '',
-  professionalType: 'MEDICO_GENERAL',
   appointmentIntervalMinutes: 30,
+})
+
+const form = ref(emptyForm())
+
+// Busqueda por nombre (sin distinguir mayusculas ni tildes)
+function normalize(text) {
+  return String(text || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+const filteredProfessionals = computed(() => {
+  const term = normalize(searchName.value.trim())
+  if (!term) return professionals.value
+  return professionals.value.filter(prof => normalize(professionalName(prof)).includes(term))
 })
 
 async function fetchSpecialties() {
@@ -50,7 +70,7 @@ async function handleCreate() {
   errorMessage.value = ''
   successMessage.value = ''
 
-  fieldErrors.value = validateProfessionalForm(form.value)
+  fieldErrors.value = validateProfessionalRegistrationForm(form.value)
   if (hasErrors(fieldErrors.value)) {
     errorMessage.value = 'Corrige los errores del formulario.'
     return
@@ -59,21 +79,12 @@ async function handleCreate() {
   isSubmitting.value = true
 
   try {
-    const created = await professionalService.create({
-      userId: Number(form.value.userId),
-      specialtyId: Number(form.value.specialtyId),
-      professionalType: form.value.professionalType,
-      appointmentIntervalMinutes: Number(form.value.appointmentIntervalMinutes),
-    })
-    successMessage.value = `¡Profesional #${created.id} registrado con exito!`
-    form.value = {
-      userId: '',
-      specialtyId: '',
-      professionalType: 'MEDICO_GENERAL',
-      appointmentIntervalMinutes: 30,
-    }
+    const created = await professionalService.register(form.value)
+    successMessage.value = `¡Profesional "${form.value.fullName.trim()}" registrado con exito! Ya puede iniciar sesion con el usuario "${form.value.username.trim()}".`
+    form.value = emptyForm()
     fieldErrors.value = {}
     await fetchProfessionals()
+    return created
   } catch (error) {
     errorMessage.value = error.message || 'No se pudo registrar el profesional.'
   } finally {
@@ -83,7 +94,7 @@ async function handleCreate() {
 
 function getSpecialtyName(id) {
   const spec = specialties.value.find(s => s.id === id)
-  return spec ? spec.name : `Especialidad #${id}`
+  return spec ? spec.name : 'Sin especialidad'
 }
 
 onMounted(async () => {
@@ -116,17 +127,60 @@ onMounted(async () => {
       <!-- Formulario para registrar profesional (solo ADMIN y SCHEDULER) -->
       <div v-if="canManage" class="card form-card">
         <h3>Registrar Profesional</h3>
+        <p class="form-hint">
+          Se crea la cuenta del profesional junto con sus datos de atencion.
+        </p>
         <form @submit.prevent="handleCreate" novalidate>
           <div class="form-group">
-            <label for="userId">ID de Usuario</label>
+            <label for="fullName">Nombre completo</label>
             <input
-              id="userId"
-              v-model="form.userId"
-              type="number"
-              placeholder="ej. 2"
+              id="fullName"
+              v-model="form.fullName"
+              type="text"
+              placeholder="ej. Carlos Perez"
+              autocomplete="off"
               :disabled="isSubmitting"
             />
-            <span v-if="fieldErrors.userId" class="field-error">{{ fieldErrors.userId }}</span>
+            <span v-if="fieldErrors.fullName" class="field-error">{{ fieldErrors.fullName }}</span>
+          </div>
+
+          <div class="form-group">
+            <label for="username">Usuario</label>
+            <input
+              id="username"
+              v-model="form.username"
+              type="text"
+              placeholder="ej. cperez"
+              autocomplete="off"
+              :disabled="isSubmitting"
+            />
+            <span v-if="fieldErrors.username" class="field-error">{{ fieldErrors.username }}</span>
+          </div>
+
+          <div class="form-group">
+            <label for="email">Correo electronico</label>
+            <input
+              id="email"
+              v-model="form.email"
+              type="email"
+              placeholder="ej. cperez@piedrazul.com"
+              autocomplete="off"
+              :disabled="isSubmitting"
+            />
+            <span v-if="fieldErrors.email" class="field-error">{{ fieldErrors.email }}</span>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Contraseña inicial</label>
+            <input
+              id="password"
+              v-model="form.password"
+              type="password"
+              placeholder="Minimo 6 caracteres"
+              autocomplete="new-password"
+              :disabled="isSubmitting"
+            />
+            <span v-if="fieldErrors.password" class="field-error">{{ fieldErrors.password }}</span>
           </div>
 
           <div class="form-group">
@@ -145,28 +199,13 @@ onMounted(async () => {
           </div>
 
           <div class="form-group">
-            <label for="profType">Tipo de Profesional</label>
-            <select
-              id="profType"
-              v-model="form.professionalType"
-              :disabled="isSubmitting"
-            >
-              <option value="MEDICO_GENERAL">Medico General</option>
-              <option value="ESPECIALISTA">Especialista</option>
-              <option value="ODONTOLOGO">Odontologo</option>
-              <option value="PSICOLOGO">Psicologo</option>
-              <option value="PEDIATRA">Pediatra</option>
-            </select>
-            <span v-if="fieldErrors.professionalType" class="field-error">{{ fieldErrors.professionalType }}</span>
-          </div>
-
-          <div class="form-group">
             <label for="interval">Duracion de Cita (minutos)</label>
             <input
               id="interval"
               v-model="form.appointmentIntervalMinutes"
               type="number"
               min="5"
+              max="480"
               step="5"
               placeholder="30"
               :disabled="isSubmitting"
@@ -184,8 +223,15 @@ onMounted(async () => {
       <!-- Listado de profesionales -->
       <div class="card list-card">
         <div class="list-header">
-          <h3>Profesionales Activos ({{ professionals.length }})</h3>
+          <h3>Profesionales Activos ({{ filteredProfessionals.length }})</h3>
           <div class="filter-box">
+            <input
+              v-model="searchName"
+              type="search"
+              class="select-filter"
+              placeholder="Buscar por nombre..."
+              aria-label="Buscar profesional por nombre"
+            />
             <select
               v-model="filterSpecialtyId"
               @change="fetchProfessionals"
@@ -204,7 +250,7 @@ onMounted(async () => {
           <p>Cargando profesionales...</p>
         </div>
 
-        <div v-else-if="professionals.length === 0" class="empty-state">
+        <div v-else-if="filteredProfessionals.length === 0" class="empty-state">
           <p>No hay profesionales registrados con los criterios seleccionados.</p>
         </div>
 
@@ -212,24 +258,20 @@ onMounted(async () => {
           <table class="data-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Usuario</th>
+                <th>Profesional</th>
                 <th>Especialidad</th>
-                <th>Tipo</th>
                 <th>Duracion Cita</th>
                 <th>Estado</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="prof in professionals" :key="prof.id">
-                <td class="cell-id">#{{ prof.id }}</td>
-                <td>User #{{ prof.userId }}</td>
+              <tr v-for="prof in filteredProfessionals" :key="prof.id">
+                <td><strong>{{ professionalName(prof) }}</strong></td>
                 <td>
                   <span class="badge-specialty">
-                    {{ getSpecialtyName(prof.specialtyId) }}
+                    {{ prof.specialtyName || getSpecialtyName(prof.specialtyId) }}
                   </span>
                 </td>
-                <td>{{ prof.professionalType }}</td>
                 <td>{{ prof.appointmentIntervalMinutes }} min</td>
                 <td>
                   <span class="status-badge status-active">
@@ -393,6 +435,18 @@ onMounted(async () => {
 
 .list-header h3 {
   margin: 0;
+}
+
+.filter-box {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.form-hint {
+  color: #64748b;
+  font-size: 0.85rem;
+  margin: 0 0 1.25rem;
 }
 
 .select-filter {

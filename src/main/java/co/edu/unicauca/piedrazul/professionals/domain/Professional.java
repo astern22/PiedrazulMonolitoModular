@@ -4,7 +4,6 @@ public class Professional {
     private Long id;
     private Long userId;
     private Long specialtyId;
-    private String professionalType;
     private Integer appointmentIntervalMinutes;
     private Boolean active;
 
@@ -15,14 +14,12 @@ public class Professional {
             Long id,
             Long userId,
             Long specialtyId,
-            String professionalType,
             Integer appointmentIntervalMinutes,
             Boolean active) {
 
         this.id = id;
         this.userId = userId;
         this.specialtyId = specialtyId;
-        this.professionalType = professionalType;
         this.appointmentIntervalMinutes = appointmentIntervalMinutes;
         this.active = active;
     }
@@ -49,14 +46,6 @@ public class Professional {
 
     public void setSpecialtyId(Long specialtyId) {
         this.specialtyId = specialtyId;
-    }
-
-    public String getProfessionalType() {
-        return professionalType;
-    }
-
-    public void setProfessionalType(String professionalType) {
-        this.professionalType = professionalType;
     }
 
     public Integer getAppointmentIntervalMinutes() {

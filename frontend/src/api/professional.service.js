@@ -10,16 +10,57 @@ export const professionalService = {
    * @param {Object} data
    * @param {number} data.userId - ID del usuario asociado
    * @param {number} data.specialtyId - ID de la especialidad
-   * @param {string} data.professionalType - Tipo de profesional (ej. MEDICO_GENERAL, ESPECIALISTA)
    * @param {number} data.appointmentIntervalMinutes - Duracion de cita en minutos (ej. 20, 30)
    * @returns {Promise<Object>}
    */
-  async create({ userId, specialtyId, professionalType, appointmentIntervalMinutes }) {
+  async create({ userId, specialtyId, appointmentIntervalMinutes }) {
     const response = await apiClient.post('/api/professionals', {
       userId: Number(userId),
       specialtyId: Number(specialtyId),
-      professionalType,
       appointmentIntervalMinutes: Number(appointmentIntervalMinutes),
+    })
+    return response.data
+  },
+
+  /**
+   * Registra un profesional junto con su cuenta de usuario.
+   * @param {Object} data
+   * @param {string} data.fullName - Nombre completo
+   * @param {string} data.username - Nombre de usuario para iniciar sesion
+   * @param {string} data.email - Correo electronico
+   * @param {string} data.password - Contrasena inicial
+   * @param {number} data.specialtyId - ID de la especialidad seleccionada
+   * @param {number} data.appointmentIntervalMinutes - Duracion de cita en minutos
+   * @returns {Promise<Object>}
+   */
+  async register({
+    fullName,
+    username,
+    email,
+    password,
+    specialtyId,
+    appointmentIntervalMinutes,
+  }) {
+    const response = await apiClient.post('/api/professionals/register', {
+      fullName: fullName.trim(),
+      username: username.trim(),
+      email: email.trim(),
+      password,
+      specialtyId: Number(specialtyId),
+      appointmentIntervalMinutes: Number(appointmentIntervalMinutes),
+    })
+    return response.data
+  },
+
+  /**
+   * Cambia la duracion de las citas de un profesional.
+   * @param {number|string} id - ID del profesional
+   * @param {number} minutes - Nueva duracion en minutos (5 a 480)
+   * @returns {Promise<Object>}
+   */
+  async updateAppointmentInterval(id, minutes) {
+    const response = await apiClient.patch(`/api/professionals/${id}/appointment-interval`, {
+      appointmentIntervalMinutes: Number(minutes),
     })
     return response.data
   },
@@ -64,4 +105,3 @@ export const professionalService = {
 }
 
 export default professionalService
-
