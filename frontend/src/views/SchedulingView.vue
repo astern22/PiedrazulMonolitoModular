@@ -1,12 +1,19 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { schedulingService, professionalService } from '@/api'
 import { useAuth } from '@/composables/useAuth'
-import { validateWeeklyAvailabilityForm, hasErrors } from '@/utils/validators'
+import {
+  validateWeeklyAvailabilityForm,
+  validateIntervalMinutes,
+  findOverlappingAvailability,
+  hasErrors,
+} from '@/utils/validators'
+import { professionalLabel, professionalName } from '@/utils/professionals'
 
 const { canManage } = useAuth()
 
 const professionals = ref([])
+// Profesional seleccionado: lo comparten el formulario, la duracion y la lista de horarios
 const selectedProfId = ref('')
 const weeklyAvailabilities = ref([])
 const isLoadingAvailabilities = ref(false)
@@ -14,12 +21,16 @@ const fieldErrors = ref({})
 
 // Formulario de nueva disponibilidad semanal
 const newAvailability = ref({
-  professionalId: '',
   dayOfWeek: 1,
   startTime: '08:00',
   endTime: '12:00',
 })
 const isSubmittingAvailability = ref(false)
+
+// Duracion de las citas del profesional seleccionado
+const intervalMinutes = ref('')
+const intervalError = ref('')
+const isSavingInterval = ref(false)
 
 // Consulta de franjas horarias libres (Available Slots)
 const slotQuery = ref({
@@ -44,25 +55,80 @@ const daysOfWeekMap = {
   7: 'Domingo',
 }
 
-async function loadProfessionals() {
+const selectedProfessional = computed(() =>
+  professionals.value.find(prof => String(prof.id) === String(selectedProfId.value)) || null
+)
+
+// Horarios ordenados por dia y hora para leerlos mejor
+const sortedAvailabilities = computed(() =>
+  [...weeklyAvailabilities.value].sort(
+    (a, b) =>
+      a.dayOfWeek - b.dayOfWeek ||
+      String(a.startTime).localeCompare(String(b.startTime))
+  )
+)
+
+// IDs de horarios que se cruzan con otro del mismo dia (por ejemplo, datos registrados antes de la validacion)
+const overlappingIds = computed(() => {
+  const ids = new Set()
+  const list = sortedAvailabilities.value
+  for (let i = 0; i < list.length; i++) {
+    for (let j = i + 1; j < list.length; j++) {
+      if (list[i].dayOfWeek !== list[j].dayOfWeek) continue
+      const startI = String(list[i].startTime).substring(0, 5)
+      const endI = String(list[i].endTime).substring(0, 5)
+      const startJ = String(list[j].startTime).substring(0, 5)
+      const endJ = String(list[j].endTime).substring(0, 5)
+      if (startI < endJ && endI > startJ) {
+        ids.add(list[i].id)
+        ids.add(list[j].id)
+      }
+    }
+  }
+  return ids
+})
+
+function formatHour(time) {
+  return String(time).substring(0, 5)
+}
+
+function syncIntervalFromSelection() {
+  intervalMinutes.value = selectedProfessional.value
+    ? selectedProfessional.value.appointmentIntervalMinutes
+    : ''
+  intervalError.value = ''
+}
+
+async function loadProfessionals(keepSelection = false) {
   try {
     professionals.value = await professionalService.getActive()
     if (professionals.value.length > 0) {
-      const firstId = professionals.value[0].id
-      selectedProfId.value = firstId
-      newAvailability.value.professionalId = firstId
-      slotQuery.value.professionalId = firstId
-      await fetchWeeklyAvailabilities(firstId)
+      const stillExists = professionals.value.some(
+        prof => String(prof.id) === String(selectedProfId.value)
+      )
+      if (!keepSelection || !stillExists) {
+        selectedProfId.value = professionals.value[0].id
+        slotQuery.value.professionalId = professionals.value[0].id
+      }
+      syncIntervalFromSelection()
+      await fetchWeeklyAvailabilities(selectedProfId.value)
     }
   } catch (error) {
     console.error('Error al cargar lista de profesionales:', error)
   }
 }
 
+async function handleProfessionalChange() {
+  errorMessage.value = ''
+  successMessage.value = ''
+  fieldErrors.value = {}
+  syncIntervalFromSelection()
+  await fetchWeeklyAvailabilities(selectedProfId.value)
+}
+
 async function fetchWeeklyAvailabilities(profId = selectedProfId.value) {
   if (!profId) return
   isLoadingAvailabilities.value = true
-  errorMessage.value = ''
   try {
     weeklyAvailabilities.value = await schedulingService.getByProfessional(profId)
   } catch (error) {
@@ -76,9 +142,26 @@ async function handleCreateAvailability() {
   errorMessage.value = ''
   successMessage.value = ''
 
-  fieldErrors.value = validateWeeklyAvailabilityForm(newAvailability.value)
+  const payload = {
+    professionalId: selectedProfId.value,
+    dayOfWeek: newAvailability.value.dayOfWeek,
+    startTime: newAvailability.value.startTime,
+    endTime: newAvailability.value.endTime,
+  }
+
+  fieldErrors.value = validateWeeklyAvailabilityForm(payload)
   if (hasErrors(fieldErrors.value)) {
     errorMessage.value = 'Corrige los errores del formulario de disponibilidad.'
+    return
+  }
+
+  // Evita cruces de horario en el mismo dia antes de llamar al servidor
+  const overlap = findOverlappingAvailability(weeklyAvailabilities.value, payload)
+  if (overlap) {
+    fieldErrors.value = {
+      startTime: 'Este rango se cruza con otro horario del mismo dia.',
+    }
+    errorMessage.value = `El horario se cruza con el del ${daysOfWeekMap[overlap.dayOfWeek]} ${formatHour(overlap.startTime)} - ${formatHour(overlap.endTime)}. Ajusta las horas o desactiva ese horario primero.`
     return
   }
 
@@ -86,20 +169,48 @@ async function handleCreateAvailability() {
 
   try {
     await schedulingService.createWeeklyAvailability({
-      professionalId: Number(newAvailability.value.professionalId),
-      dayOfWeek: Number(newAvailability.value.dayOfWeek),
-      startTime: newAvailability.value.startTime,
-      endTime: newAvailability.value.endTime,
+      professionalId: Number(payload.professionalId),
+      dayOfWeek: Number(payload.dayOfWeek),
+      startTime: payload.startTime,
+      endTime: payload.endTime,
     })
-    successMessage.value = `¡Disponibilidad para el dia ${daysOfWeekMap[newAvailability.value.dayOfWeek]} agregada con exito!`
+    successMessage.value = `¡Disponibilidad del ${daysOfWeekMap[payload.dayOfWeek]} agregada con exito!`
     fieldErrors.value = {}
-    if (selectedProfId.value == newAvailability.value.professionalId) {
-      await fetchWeeklyAvailabilities(selectedProfId.value)
-    }
+    await fetchWeeklyAvailabilities(selectedProfId.value)
   } catch (error) {
     errorMessage.value = error.message || 'No se pudo registrar la disponibilidad.'
   } finally {
     isSubmittingAvailability.value = false
+  }
+}
+
+async function handleSaveInterval() {
+  errorMessage.value = ''
+  successMessage.value = ''
+  intervalError.value = validateIntervalMinutes(intervalMinutes.value) || ''
+  if (intervalError.value) return
+
+  if (Number(intervalMinutes.value) === selectedProfessional.value?.appointmentIntervalMinutes) {
+    intervalError.value = 'La duracion es la misma que la actual.'
+    return
+  }
+
+  isSavingInterval.value = true
+  try {
+    const updated = await professionalService.updateAppointmentInterval(
+      selectedProfId.value,
+      intervalMinutes.value
+    )
+    successMessage.value = `Duracion de cita de ${professionalName(updated)} actualizada a ${updated.appointmentIntervalMinutes} minutos. Las citas ya agendadas no se modifican.`
+    await loadProfessionals(true)
+    // Si ya se habia consultado una fecha, recalcula las franjas con la nueva duracion
+    if (hasQueriedSlots.value && slotQuery.value.professionalId) {
+      await handleQuerySlots()
+    }
+  } catch (error) {
+    errorMessage.value = error.message || 'No se pudo actualizar la duracion de la cita.'
+  } finally {
+    isSavingInterval.value = false
   }
 }
 
@@ -118,7 +229,7 @@ async function handleDeactivate(id) {
 
 async function handleQuerySlots() {
   if (!slotQuery.value.professionalId || !slotQuery.value.date) {
-    errorMessage.value = 'Ingresa el profesional y la fecha para consultar las franjas libres.'
+    errorMessage.value = 'Selecciona el profesional y la fecha para consultar las franjas libres.'
     return
   }
 
@@ -175,8 +286,9 @@ onMounted(() => {
               <label for="profSelect">Profesional</label>
               <select
                 id="profSelect"
-                v-model="newAvailability.professionalId"
+                v-model="selectedProfId"
                 :disabled="isSubmittingAvailability"
+                @change="handleProfessionalChange"
               >
                 <option value="" disabled>Selecciona un profesional</option>
                 <option
@@ -184,7 +296,7 @@ onMounted(() => {
                   :key="prof.id"
                   :value="prof.id"
                 >
-                  Dr(a). ID #{{ prof.id }} ({{ prof.professionalType }})
+                  {{ professionalLabel(prof) }}
                 </option>
               </select>
               <span v-if="fieldErrors.professionalId" class="field-error">{{ fieldErrors.professionalId }}</span>
@@ -238,20 +350,58 @@ onMounted(() => {
           </form>
         </div>
 
+        <!-- Duracion de las citas del profesional seleccionado -->
+        <div v-if="selectedProfessional" class="card" :class="{ 'mt-4': canManage }">
+          <h3>Duracion de las Citas</h3>
+          <p class="section-desc">
+            Tiempo que dura cada cita de {{ professionalName(selectedProfessional) }}.
+            Puedes cambiarlo cuando lo necesite; las citas ya agendadas no se modifican.
+          </p>
+
+          <form v-if="canManage" @submit.prevent="handleSaveInterval" class="interval-form" novalidate>
+            <div class="form-group interval-input">
+              <label for="intervalMinutes">Minutos por cita</label>
+              <input
+                id="intervalMinutes"
+                v-model="intervalMinutes"
+                type="number"
+                min="5"
+                max="480"
+                step="5"
+                :disabled="isSavingInterval"
+              />
+            </div>
+            <button type="submit" class="btn btn-primary" :disabled="isSavingInterval">
+              <span v-if="isSavingInterval" class="spinner"></span>
+              <span v-else>Guardar Duracion</span>
+            </button>
+          </form>
+          <span v-if="intervalError" class="field-error">{{ intervalError }}</span>
+
+          <p v-if="!canManage" class="interval-readonly">
+            <strong>{{ selectedProfessional.appointmentIntervalMinutes }} minutos</strong> por cita
+          </p>
+        </div>
+
         <!-- Listado de disponibilidades registradas -->
-        <div class="card" :class="{ 'mt-4': canManage }">
+        <div class="card mt-4">
           <div class="card-header-flex">
             <h3>Horarios Semanales</h3>
             <select
               v-model="selectedProfId"
-              @change="fetchWeeklyAvailabilities(selectedProfId)"
+              @change="handleProfessionalChange"
               class="select-sm"
             >
               <option value="" disabled>Filtrar por profesional</option>
               <option v-for="prof in professionals" :key="prof.id" :value="prof.id">
-                Dr(a). ID #{{ prof.id }}
+                {{ professionalName(prof) }}
               </option>
             </select>
+          </div>
+
+          <div v-if="overlappingIds.size > 0" class="alert alert-warning">
+            Hay horarios que se cruzan entre si (marcados abajo). Desactiva el que sobre para
+            evitar franjas repetidas.
           </div>
 
           <div v-if="isLoadingAvailabilities" class="loading-state">
@@ -264,10 +414,16 @@ onMounted(() => {
           </div>
 
           <ul v-else class="availability-list">
-            <li v-for="item in weeklyAvailabilities" :key="item.id" class="availability-item">
+            <li
+              v-for="item in sortedAvailabilities"
+              :key="item.id"
+              class="availability-item"
+              :class="{ 'availability-conflict': overlappingIds.has(item.id) }"
+            >
               <div>
                 <strong>{{ daysOfWeekMap[item.dayOfWeek] }}</strong>:
-                <span class="hours">{{ item.startTime }} - {{ item.endTime }}</span>
+                <span class="hours">{{ formatHour(item.startTime) }} - {{ formatHour(item.endTime) }}</span>
+                <span v-if="overlappingIds.has(item.id)" class="conflict-badge">Se cruza</span>
               </div>
               <button
                 v-if="canManage"
@@ -296,7 +452,7 @@ onMounted(() => {
               <select id="slotProf" v-model="slotQuery.professionalId" required>
                 <option value="" disabled>Selecciona profesional</option>
                 <option v-for="prof in professionals" :key="prof.id" :value="prof.id">
-                  Dr(a). ID #{{ prof.id }} ({{ prof.professionalType }} - {{ prof.appointmentIntervalMinutes }} min)
+                  {{ professionalLabel(prof, { withInterval: true }) }}
                 </option>
               </select>
             </div>
@@ -529,6 +685,44 @@ onMounted(() => {
   font-family: monospace;
   font-weight: 600;
   margin-left: 0.4rem;
+}
+
+.interval-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.interval-input {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.interval-readonly {
+  margin: 0;
+  color: #334155;
+}
+
+.alert-warning {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  margin-bottom: 1rem;
+}
+
+.availability-conflict {
+  background: #fffbeb;
+}
+
+.conflict-badge {
+  margin-left: 0.5rem;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  border-radius: 9999px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
 }
 
 .slots-query-form {

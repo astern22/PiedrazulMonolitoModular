@@ -25,6 +25,52 @@ export const professionalService = {
   },
 
   /**
+   * Registra un profesional junto con su cuenta de usuario.
+   * @param {Object} data
+   * @param {string} data.fullName - Nombre completo
+   * @param {string} data.username - Nombre de usuario para iniciar sesion
+   * @param {string} data.email - Correo electronico
+   * @param {string} data.password - Contrasena inicial
+   * @param {number} data.specialtyId - ID de la especialidad seleccionada
+   * @param {string} data.professionalType - MEDICO o TERAPEUTA
+   * @param {number} data.appointmentIntervalMinutes - Duracion de cita en minutos
+   * @returns {Promise<Object>}
+   */
+  async register({
+    fullName,
+    username,
+    email,
+    password,
+    specialtyId,
+    professionalType,
+    appointmentIntervalMinutes,
+  }) {
+    const response = await apiClient.post('/api/professionals/register', {
+      fullName: fullName.trim(),
+      username: username.trim(),
+      email: email.trim(),
+      password,
+      specialtyId: Number(specialtyId),
+      professionalType,
+      appointmentIntervalMinutes: Number(appointmentIntervalMinutes),
+    })
+    return response.data
+  },
+
+  /**
+   * Cambia la duracion de las citas de un profesional.
+   * @param {number|string} id - ID del profesional
+   * @param {number} minutes - Nueva duracion en minutos (5 a 480)
+   * @returns {Promise<Object>}
+   */
+  async updateAppointmentInterval(id, minutes) {
+    const response = await apiClient.patch(`/api/professionals/${id}/appointment-interval`, {
+      appointmentIntervalMinutes: Number(minutes),
+    })
+    return response.data
+  },
+
+  /**
    * Obtiene la lista completa de todos los profesionales.
    * @returns {Promise<Array<Object>>}
    */
@@ -64,4 +110,3 @@ export const professionalService = {
 }
 
 export default professionalService
-
