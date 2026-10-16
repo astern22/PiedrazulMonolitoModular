@@ -1,206 +1,214 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
-import { appointmentService, schedulingService, professionalService, patientService } from '@/api'
-import { useAuth } from '@/composables/useAuth'
-import { validateAppointmentForm, hasErrors } from '@/utils/validators'
-import { professionalLabel, professionalNameById } from '@/utils/professionals'
+import { ref, computed, onMounted, watch } from "vue";
+import {
+  appointmentService,
+  schedulingService,
+  professionalService,
+  patientService,
+} from "@/api";
+import { useAuth } from "@/composables/useAuth";
+import { validateAppointmentForm, hasErrors } from "@/utils/validators";
+import { professionalLabel, professionalNameById } from "@/utils/professionals";
 
-const { canManage, isPatient } = useAuth()
+const { canManage, isPatient } = useAuth();
 
-const appointments = ref([])
+const appointments = ref([]);
 // Todos los profesionales (para mostrar el nombre en la tabla) y los activos (para elegir)
-const allProfessionals = ref([])
+const allProfessionals = ref([]);
 const professionals = computed(() =>
-  allProfessionals.value.filter(prof => prof.active !== false)
-)
-const fieldErrors = ref({})
-const isLoading = ref(false)
-const isSubmitting = ref(false)
-const errorMessage = ref('')
-const successMessage = ref('')
-const showCreateForm = ref(false)
+  allProfessionals.value.filter((prof) => prof.active !== false),
+);
+const fieldErrors = ref({});
+const isLoading = ref(false);
+const isSubmitting = ref(false);
+const errorMessage = ref("");
+const successMessage = ref("");
+const showCreateForm = ref(false);
+const isFiltered = ref(false);
 
 // Id del paciente vinculado al usuario autenticado (solo rol paciente)
-const currentPatient = ref(null)
-const isLoadingCurrentPatient = ref(false)
+const currentPatient = ref(null);
+const isLoadingCurrentPatient = ref(false);
 
 // Busqueda de paciente por cedula (rol agendador/admin)
 const patientSearch = ref({
-  documentNumber: '',
+  documentNumber: "",
   result: null,
   isSearching: false,
-  error: '',
-})
+  error: "",
+});
 
 // Franjas de horario disponibles
-const availableSlots = ref([])
-const isLoadingSlots = ref(false)
-const selectedSlotIndex = ref(null)
+const availableSlots = ref([]);
+const isLoadingSlots = ref(false);
+const selectedSlotIndex = ref(null);
 
-const showManualTime = computed(() =>
-  form.value.professionalId &&
-  form.value.appointmentDate &&
-  !isLoadingSlots.value &&
-  availableSlots.value.length === 0
-)
+const showManualTime = computed(
+  () =>
+    form.value.professionalId &&
+    form.value.appointmentDate &&
+    !isLoadingSlots.value &&
+    availableSlots.value.length === 0,
+);
 
-const todayStr = computed(() => new Date().toISOString().split('T')[0])
+const todayStr = computed(() => new Date().toISOString().split("T")[0]);
 
 // Formulario de nueva cita
 const form = ref({
-  patientId: '',
-  professionalId: '',
-  appointmentDate: '',
-  startTime: '08:00',
-  endTime: '08:30',
-})
+  patientId: "",
+  professionalId: "",
+  appointmentDate: "",
+  startTime: "08:00",
+  endTime: "08:30",
+});
 
 // Filtros de busqueda
 const filter = ref({
-  professionalId: '',
-  date: '',
-})
+  professionalId: "",
+  date: "",
+});
 
 async function loadPatientsList() {
-  if (!isPatient.value) return
-  isLoadingCurrentPatient.value = true
+  if (!isPatient.value) return;
+  isLoadingCurrentPatient.value = true;
   try {
-    currentPatient.value = await patientService.getMe()
-    form.value.patientId = currentPatient.value ? currentPatient.value.id : ''
+    currentPatient.value = await patientService.getMe();
+    form.value.patientId = currentPatient.value ? currentPatient.value.id : "";
   } catch (error) {
-    currentPatient.value = null
-    console.error('Error al cargar el paciente del usuario actual:', error)
+    currentPatient.value = null;
+    console.error("Error al cargar el paciente del usuario actual:", error);
   } finally {
-    isLoadingCurrentPatient.value = false
+    isLoadingCurrentPatient.value = false;
   }
 }
 
 function resetPatientSearch() {
   patientSearch.value = {
-    documentNumber: '',
+    documentNumber: "",
     result: null,
     isSearching: false,
-    error: '',
-  }
+    error: "",
+  };
 }
 
 function openCreateForm() {
-  showCreateForm.value = true
+  showCreateForm.value = true;
   if (isPatient.value) {
-    form.value.patientId = currentPatient.value ? currentPatient.value.id : ''
+    form.value.patientId = currentPatient.value ? currentPatient.value.id : "";
   } else {
-    resetPatientSearch()
-    form.value.patientId = ''
+    resetPatientSearch();
+    form.value.patientId = "";
   }
 }
 
 function closeCreateForm() {
-  showCreateForm.value = false
+  showCreateForm.value = false;
   if (isPatient.value) {
-    form.value.patientId = currentPatient.value ? currentPatient.value.id : ''
+    form.value.patientId = currentPatient.value ? currentPatient.value.id : "";
   } else {
-    resetPatientSearch()
-    form.value.patientId = ''
+    resetPatientSearch();
+    form.value.patientId = "";
   }
 }
 
 function onPatientDocumentChange() {
-  patientSearch.value.result = null
-  patientSearch.value.error = ''
-  form.value.patientId = ''
+  patientSearch.value.result = null;
+  patientSearch.value.error = "";
+  form.value.patientId = "";
 }
 
 async function searchPatientByDocument() {
-  const doc = patientSearch.value.documentNumber.trim()
-  if (!doc) return
+  const doc = patientSearch.value.documentNumber.trim();
+  if (!doc) return;
 
-  patientSearch.value.isSearching = true
-  patientSearch.value.error = ''
-  patientSearch.value.result = null
+  patientSearch.value.isSearching = true;
+  patientSearch.value.error = "";
+  patientSearch.value.result = null;
 
   try {
-    const patient = await patientService.getByDocument(doc)
-    patientSearch.value.result = patient
-    form.value.patientId = patient.id
+    const patient = await patientService.getByDocument(doc);
+    patientSearch.value.result = patient;
+    form.value.patientId = patient.id;
   } catch (error) {
-    form.value.patientId = ''
+    form.value.patientId = "";
     patientSearch.value.error =
-      'No se encontro un paciente con ese numero de documento. Verifica el numero o registralo primero en el modulo de Pacientes.'
+      "No se encontro un paciente con ese numero de documento. Verifica el numero o registralo primero en el modulo de Pacientes.";
   } finally {
-    patientSearch.value.isSearching = false
+    patientSearch.value.isSearching = false;
   }
 }
 
 function addMinutesToTime(time, minutes) {
-  if (!time || !minutes) return time
-  const [h, m] = time.split(':').map(Number)
-  if (Number.isNaN(h) || Number.isNaN(m)) return time
-  const totalMinutes = h * 60 + m + Number(minutes)
-  const wrapped = ((totalMinutes % 1440) + 1440) % 1440
-  const hh = String(Math.floor(wrapped / 60)).padStart(2, '0')
-  const mm = String(wrapped % 60).padStart(2, '0')
-  return `${hh}:${mm}`
+  if (!time || !minutes) return time;
+  const [h, m] = time.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return time;
+  const totalMinutes = h * 60 + m + Number(minutes);
+  const wrapped = ((totalMinutes % 1440) + 1440) % 1440;
+  const hh = String(Math.floor(wrapped / 60)).padStart(2, "0");
+  const mm = String(wrapped % 60).padStart(2, "0");
+  return `${hh}:${mm}`;
 }
 
 function recalculateEndTime() {
   const professional = professionals.value.find(
-    (prof) => String(prof.id) === String(form.value.professionalId)
-  )
+    (prof) => String(prof.id) === String(form.value.professionalId),
+  );
   if (professional?.appointmentIntervalMinutes && form.value.startTime) {
     form.value.endTime = addMinutesToTime(
       form.value.startTime,
-      professional.appointmentIntervalMinutes
-    )
+      professional.appointmentIntervalMinutes,
+    );
   }
 }
 
 async function loadProfessionals() {
   try {
-    allProfessionals.value = await professionalService.getAll()
+    allProfessionals.value = await professionalService.getAll();
   } catch (error) {
-    console.error('Error al cargar lista de profesionales:', error)
+    console.error("Error al cargar lista de profesionales:", error);
   }
 }
 
 async function fetchAppointments() {
-  isLoading.value = true
-  errorMessage.value = ''
+  isLoading.value = true;
+  errorMessage.value = "";
+  isFiltered.value = false;
   try {
     // Un paciente solo debe ver SUS PROPIAS citas, nunca las de otros pacientes.
     if (isPatient.value) {
       appointments.value = currentPatient.value
         ? await appointmentService.getByPatientId(currentPatient.value.id)
-        : []
+        : [];
     } else {
-      appointments.value = await appointmentService.getAll()
+      appointments.value = await appointmentService.getAll();
     }
   } catch (error) {
-    errorMessage.value = error.message || 'Error al cargar las citas medicas.'
+    errorMessage.value = error.message || "Error al cargar las citas medicas.";
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
 }
 
 async function fetchAvailableSlots() {
   if (!form.value.professionalId || !form.value.appointmentDate) {
-    availableSlots.value = []
-    selectedSlotIndex.value = null
-    return
+    availableSlots.value = [];
+    selectedSlotIndex.value = null;
+    return;
   }
 
-  isLoadingSlots.value = true
-  selectedSlotIndex.value = null
+  isLoadingSlots.value = true;
+  selectedSlotIndex.value = null;
   try {
     const slots = await schedulingService.getAvailableSlots(
       form.value.professionalId,
-      form.value.appointmentDate
-    )
-    availableSlots.value = slots || []
+      form.value.appointmentDate,
+    );
+    availableSlots.value = slots || [];
   } catch (error) {
-    console.error('Error al obtener franjas horarias:', error)
-    availableSlots.value = []
+    console.error("Error al obtener franjas horarias:", error);
+    availableSlots.value = [];
   } finally {
-    isLoadingSlots.value = false
+    isLoadingSlots.value = false;
   }
 }
 
@@ -208,73 +216,139 @@ watch(
   () => [form.value.professionalId, form.value.appointmentDate],
   () => {
     if (showCreateForm.value) {
-      fetchAvailableSlots()
+      fetchAvailableSlots();
     }
-  }
-)
+  },
+);
 
 // Calcula Hora Fin automaticamente io
 watch(
   () => [form.value.professionalId, form.value.startTime],
   () => {
     if (showCreateForm.value) {
-      recalculateEndTime()
+      recalculateEndTime();
     }
-  }
-)
+  },
+);
 
 function selectSlot(slot, index) {
-  selectedSlotIndex.value = index
-  form.value.startTime = slot.startTime.substring(0, 5)
-  form.value.endTime = slot.endTime.substring(0, 5)
+  selectedSlotIndex.value = index;
+  form.value.startTime = slot.startTime.substring(0, 5);
+  form.value.endTime = slot.endTime.substring(0, 5);
 }
 
 async function handleSearch() {
   if (!filter.value.professionalId || !filter.value.date) {
-    errorMessage.value = 'Para buscar, selecciona el profesional y la fecha.'
-    return
+    errorMessage.value = "Para buscar, selecciona el profesional y la fecha.";
+    return;
   }
 
-  isLoading.value = true
-  errorMessage.value = ''
+  isLoading.value = true;
+  errorMessage.value = "";
+  isFiltered.value = true;
   try {
     appointments.value = await appointmentService.search({
       professionalId: filter.value.professionalId,
       date: filter.value.date,
-    })
+    });
   } catch (error) {
-    errorMessage.value = error.message || 'Error al buscar citas con los criterios indicados.'
+    errorMessage.value =
+      error.message || "Error al buscar citas con los criterios indicados.";
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
 }
 
 function handleClearSearch() {
-  filter.value.professionalId = ''
-  filter.value.date = ''
-  fetchAppointments()
+  filter.value.professionalId = "";
+  filter.value.date = "";
+  isFiltered.value = false;
+  fetchAppointments();
+}
+
+function exportToCSV() {
+  if (!appointments.value || appointments.value.length === 0) {
+    errorMessage.value = "No hay datos para exportar.";
+    return;
+  }
+
+  const columns = [
+    { key: "id", label: "ID" },
+    { key: "patientId", label: "ID Paciente" },
+    { key: "professionalName", label: "Profesional" },
+    { key: "appointmentDate", label: "Fecha" },
+    { key: "startTime", label: "Hora Inicio" },
+    { key: "endTime", label: "Hora Fin" },
+    { key: "status", label: "Estado" },
+  ];
+
+  const dataToExport = appointments.value.map((item) => ({
+    id: item.id,
+    patientId: item.patientId,
+    professionalName: professionalNameById(
+      allProfessionals.value,
+      item.professionalId,
+    ),
+    appointmentDate: item.appointmentDate,
+    startTime: item.startTime,
+    endTime: item.endTime,
+    status: item.status,
+  }));
+
+  const escapeCSV = (value) => {
+    if (value === null || value === undefined) return "";
+    const str = String(value);
+    if (str.includes(",") || str.includes("\n") || str.includes('"')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const headers = columns.map((col) => escapeCSV(col.label)).join(",");
+  const rows = dataToExport.map((item) =>
+    columns.map((col) => escapeCSV(item[col.key])).join(","),
+  );
+
+  const csvContent = [headers, ...rows].join("\r\n");
+
+  const BOM = "\uFEFF";
+  const blob = new Blob([BOM + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = url;
+  const dateStr = new Date().toISOString().split("T")[0];
+  link.setAttribute("download", `citas_medicas_${dateStr}.csv`);
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(url);
 }
 
 async function handleCreate() {
-  errorMessage.value = ''
-  successMessage.value = ''
+  errorMessage.value = "";
+  successMessage.value = "";
 
   if (isPatient.value) {
     if (!currentPatient.value) {
       errorMessage.value =
-        'No se encontro un paciente vinculado a tu usuario. Contacta al administrador.'
-      return
+        "No se encontro un paciente vinculado a tu usuario. Contacta al administrador.";
+      return;
     }
-    form.value.patientId = currentPatient.value.id
+    form.value.patientId = currentPatient.value.id;
   }
 
-  fieldErrors.value = validateAppointmentForm(form.value)
+  fieldErrors.value = validateAppointmentForm(form.value);
   if (hasErrors(fieldErrors.value)) {
-    errorMessage.value = 'Corrige los errores del formulario de cita.'
-    return
+    errorMessage.value = "Corrige los errores del formulario de cita.";
+    return;
   }
 
-  isSubmitting.value = true
+  isSubmitting.value = true;
 
   try {
     const created = await appointmentService.create({
@@ -283,53 +357,54 @@ async function handleCreate() {
       appointmentDate: form.value.appointmentDate,
       startTime: form.value.startTime,
       endTime: form.value.endTime,
-    })
+    });
 
-    successMessage.value = `¡Cita medica #${created.id} agendada correctamente!`
+    successMessage.value = `¡Cita medica #${created.id} agendada correctamente!`;
     form.value = {
-      patientId: isPatient.value && currentPatient.value ? currentPatient.value.id : '',
-      professionalId: '',
-      appointmentDate: '',
-      startTime: '08:00',
-      endTime: '08:30',
-    }
-    fieldErrors.value = {}
-    availableSlots.value = []
-    selectedSlotIndex.value = null
-    showCreateForm.value = false
-    resetPatientSearch()
-    await fetchAppointments()
+      patientId:
+        isPatient.value && currentPatient.value ? currentPatient.value.id : "",
+      professionalId: "",
+      appointmentDate: "",
+      startTime: "08:00",
+      endTime: "08:30",
+    };
+    fieldErrors.value = {};
+    availableSlots.value = [];
+    selectedSlotIndex.value = null;
+    showCreateForm.value = false;
+    resetPatientSearch();
+    await fetchAppointments();
   } catch (error) {
-    errorMessage.value = error.message || 'No se pudo crear la cita medica.'
+    errorMessage.value = error.message || "No se pudo crear la cita medica.";
   } finally {
-    isSubmitting.value = false
+    isSubmitting.value = false;
   }
 }
 
 async function handleDelete(id) {
   if (!confirm(`¿Estas seguro de que deseas cancelar la cita #${id}?`)) {
-    return
+    return;
   }
 
-  errorMessage.value = ''
-  successMessage.value = ''
+  errorMessage.value = "";
+  successMessage.value = "";
   try {
-    await appointmentService.delete(id)
-    successMessage.value = `Cita #${id} cancelada exitosamente.`
-    await fetchAppointments()
+    await appointmentService.delete(id);
+    successMessage.value = `Cita #${id} cancelada exitosamente.`;
+    await fetchAppointments();
   } catch (error) {
-    errorMessage.value = error.message || `No se pudo cancelar la cita #${id}.`
+    errorMessage.value = error.message || `No se pudo cancelar la cita #${id}.`;
   }
 }
 
 onMounted(async () => {
-  loadProfessionals()
+  loadProfessionals();
 
   if (isPatient.value) {
-    await loadPatientsList()
+    await loadPatientsList();
   }
-  fetchAppointments()
-})
+  fetchAppointments();
+});
 </script>
 
 <template>
@@ -337,7 +412,10 @@ onMounted(async () => {
     <div class="page-header">
       <div>
         <h1>Gestion de Citas Medicas</h1>
-        <p>Agendamiento, busqueda y administracion de citas de la entidad de salud</p>
+        <p>
+          Agendamiento, busqueda y administracion de citas de la entidad de
+          salud
+        </p>
       </div>
       <div class="header-actions">
         <!-- Solo Pacientes, Administradores y Agendadores pueden crear citas -->
@@ -347,9 +425,13 @@ onMounted(async () => {
           class="btn"
           :class="showCreateForm ? 'btn-secondary' : 'btn-primary'"
         >
-          {{ showCreateForm ? 'Cancelar' : 'Agendar Cita' }}
+          {{ showCreateForm ? "Cancelar" : "Agendar Cita" }}
         </button>
-        <button @click="fetchAppointments" class="btn btn-outline" :disabled="isLoading">
+        <button
+          @click="fetchAppointments"
+          class="btn btn-outline"
+          :disabled="isLoading"
+        >
           Refrescar
         </button>
       </div>
@@ -370,7 +452,9 @@ onMounted(async () => {
         <div class="form-grid">
           <div v-if="isPatient" class="form-group patient-info">
             <label>Paciente</label>
-            <span v-if="isLoadingCurrentPatient" class="text-muted">Cargando tu informacion...</span>
+            <span v-if="isLoadingCurrentPatient" class="text-muted"
+              >Cargando tu informacion...</span
+            >
             <span v-else-if="currentPatient" class="patient-chip">
               Paciente #{{ currentPatient.id }}
             </span>
@@ -395,18 +479,34 @@ onMounted(async () => {
                 type="button"
                 class="btn btn-secondary btn-search"
                 @click="searchPatientByDocument"
-                :disabled="isSubmitting || patientSearch.isSearching || !patientSearch.documentNumber.trim()"
+                :disabled="
+                  isSubmitting ||
+                  patientSearch.isSearching ||
+                  !patientSearch.documentNumber.trim()
+                "
               >
-                <span v-if="patientSearch.isSearching" class="spinner-sm"></span>
+                <span
+                  v-if="patientSearch.isSearching"
+                  class="spinner-sm"
+                ></span>
                 <span v-else>Buscar</span>
               </button>
             </div>
             <span v-if="patientSearch.result" class="patient-found">
-              ✓ {{ patientSearch.result.fullName || 'Paciente sin cuenta de usuario' }} — Doc.
+              ✓
+              {{
+                patientSearch.result.fullName ||
+                "Paciente sin cuenta de usuario"
+              }}
+              — Doc.
               {{ patientSearch.result.documentNumber }}
             </span>
-            <span v-else-if="patientSearch.error" class="field-error">{{ patientSearch.error }}</span>
-            <span v-else-if="fieldErrors.patientId" class="field-error">{{ fieldErrors.patientId }}</span>
+            <span v-else-if="patientSearch.error" class="field-error">{{
+              patientSearch.error
+            }}</span>
+            <span v-else-if="fieldErrors.patientId" class="field-error">{{
+              fieldErrors.patientId
+            }}</span>
           </div>
 
           <div class="form-group">
@@ -417,11 +517,17 @@ onMounted(async () => {
               :disabled="isSubmitting"
             >
               <option value="" disabled>Selecciona profesional</option>
-              <option v-for="prof in professionals" :key="prof.id" :value="prof.id">
+              <option
+                v-for="prof in professionals"
+                :key="prof.id"
+                :value="prof.id"
+              >
                 {{ professionalLabel(prof) }}
               </option>
             </select>
-            <span v-if="fieldErrors.professionalId" class="field-error">{{ fieldErrors.professionalId }}</span>
+            <span v-if="fieldErrors.professionalId" class="field-error">{{
+              fieldErrors.professionalId
+            }}</span>
           </div>
 
           <div class="form-group">
@@ -433,7 +539,9 @@ onMounted(async () => {
               :min="todayStr"
               :disabled="isSubmitting"
             />
-            <span v-if="fieldErrors.appointmentDate" class="field-error">{{ fieldErrors.appointmentDate }}</span>
+            <span v-if="fieldErrors.appointmentDate" class="field-error">{{
+              fieldErrors.appointmentDate
+            }}</span>
           </div>
 
           <div v-if="showManualTime" class="form-group">
@@ -444,7 +552,9 @@ onMounted(async () => {
               type="time"
               :disabled="isSubmitting"
             />
-            <span v-if="fieldErrors.startTime" class="field-error">{{ fieldErrors.startTime }}</span>
+            <span v-if="fieldErrors.startTime" class="field-error">{{
+              fieldErrors.startTime
+            }}</span>
           </div>
 
           <div v-if="showManualTime" class="form-group">
@@ -456,20 +566,24 @@ onMounted(async () => {
               :disabled="isSubmitting"
             />
             <span class="text-muted-xs"></span>
-            <span v-if="fieldErrors.endTime" class="field-error">{{ fieldErrors.endTime }}</span>
+            <span v-if="fieldErrors.endTime" class="field-error">{{
+              fieldErrors.endTime
+            }}</span>
           </div>
         </div>
 
         <!-- Franjas horarias disponibles calculadas por scheduling/AvailableSlotService -->
-        <div v-if="form.professionalId && form.appointmentDate" class="slots-section">
-          <label class="slots-label">
-            Franjas Horarias Disponibles:
-          </label>
+        <div
+          v-if="form.professionalId && form.appointmentDate"
+          class="slots-section"
+        >
+          <label class="slots-label"> Franjas Horarias Disponibles: </label>
           <div v-if="isLoadingSlots" class="slots-loading">
             <span class="spinner-sm"></span> Calculando franjas libres...
           </div>
           <div v-else-if="availableSlots.length === 0" class="no-slots">
-            No se encontraron franjas libres para este dia. Puedes ingresar el horario manualmente arriba.
+            No se encontraron franjas libres para este dia. Puedes ingresar el
+            horario manualmente arriba.
           </div>
           <div v-else class="slots-container">
             <button
@@ -480,13 +594,18 @@ onMounted(async () => {
               class="slot-chip"
               :class="{ 'slot-selected': selectedSlotIndex === idx }"
             >
-              {{ slot.startTime.substring(0, 5) }} - {{ slot.endTime.substring(0, 5) }}
+              {{ slot.startTime.substring(0, 5) }} -
+              {{ slot.endTime.substring(0, 5) }}
             </button>
           </div>
         </div>
 
         <div class="form-actions mt-3">
-          <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
+          <button
+            type="submit"
+            class="btn btn-primary"
+            :disabled="isSubmitting"
+          >
             <span v-if="isSubmitting" class="spinner"></span>
             <span v-else>Guardar Cita</span>
           </button>
@@ -502,7 +621,11 @@ onMounted(async () => {
           <label for="filterProfId">Profesional</label>
           <select id="filterProfId" v-model="filter.professionalId">
             <option value="">Selecciona un profesional</option>
-            <option v-for="prof in professionals" :key="prof.id" :value="prof.id">
+            <option
+              v-for="prof in professionals"
+              :key="prof.id"
+              :value="prof.id"
+            >
               {{ professionalLabel(prof) }}
             </option>
           </select>
@@ -529,8 +652,17 @@ onMounted(async () => {
 
     <!-- Tabla de Citas -->
     <div class="card table-card">
-      <div class="table-header">
+      <div class="table-header" style="display: flex; justify-content: space-between; align-items: baseline;">
         <h3>Citas Medicas ({{ appointments.length }})</h3>
+        <button
+          v-if="appointments.length > 0 && isFiltered"
+          @click="exportToCSV"
+          type="button"
+          class="btn btn-primary"
+          :disabled="isLoading"
+        >
+          Exportar a CSV
+        </button>
       </div>
 
       <div v-if="isLoading" class="loading-state">
@@ -539,7 +671,10 @@ onMounted(async () => {
       </div>
 
       <div v-else-if="appointments.length === 0" class="empty-state">
-        <p>No se encontraron citas medicas registradas con los criterios seleccionados.</p>
+        <p>
+          No se encontraron citas medicas registradas con los criterios
+          seleccionados.
+        </p>
       </div>
 
       <div v-else class="table-responsive">
@@ -558,17 +693,29 @@ onMounted(async () => {
           <tbody>
             <tr v-for="item in appointments" :key="item.id">
               <td class="cell-id">#{{ item.id }}</td>
-              <td><strong>Paciente #{{ item.patientId }}</strong></td>
-              <td>{{ professionalNameById(allProfessionals, item.professionalId) }}</td>
+              <td>
+                <strong>Paciente #{{ item.patientId }}</strong>
+              </td>
+              <td>
+                {{
+                  professionalNameById(allProfessionals, item.professionalId)
+                }}
+              </td>
               <td>{{ item.appointmentDate }}</td>
               <td>{{ item.startTime }} - {{ item.endTime }}</td>
               <td>
                 <span
                   class="status-badge"
                   :class="{
-                    'status-scheduled': item.status === 'SCHEDULED' || item.status === 'PROGRAMADA',
-                    'status-completed': item.status === 'COMPLETED' || item.status === 'COMPLETADA',
-                    'status-cancelled': item.status === 'CANCELLED' || item.status === 'CANCELADA',
+                    'status-scheduled':
+                      item.status === 'SCHEDULED' ||
+                      item.status === 'PROGRAMADA',
+                    'status-completed':
+                      item.status === 'COMPLETED' ||
+                      item.status === 'COMPLETADA',
+                    'status-cancelled':
+                      item.status === 'CANCELLED' ||
+                      item.status === 'CANCELADA',
                   }"
                 >
                   {{ item.status }}
@@ -1001,4 +1148,5 @@ onMounted(async () => {
     transform: rotate(360deg);
   }
 }
-</style>
+
+</style>
