@@ -159,7 +159,6 @@ onMounted(() => {
   <div class="view-container">
     <div class="page-header">
       <div>
-        <div class="header-badge">Modulo Medico</div>
         <h1>Gestion de Pacientes</h1>
         <p>Administracion y registro de la informacion clinica y personal de los pacientes</p>
       </div>
