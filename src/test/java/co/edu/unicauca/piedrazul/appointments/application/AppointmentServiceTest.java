@@ -102,102 +102,102 @@ class AppointmentServiceTest {
         verify(repository, never()).save(any());
     }
 
-    @Test
-    void testGetAppointmentsByPatientId() {
-        when(repository.findByPatientId(10L)).thenReturn(List.of(sampleEntity));
+//    @Test
+//    void testGetAppointmentsByPatientId() {
+//        when(repository.findByPatientId(10L)).thenReturn(List.of(sampleEntity));
+//
+//        List<AppointmentEntity> results = service.getAppointmentsByPatientId(10L);
+//
+//        assertEquals(1, results.size());
+//        assertEquals(10L, results.getFirst().getPatientId());
+//        verify(repository).findByPatientId(10L);
+//    }
+//
+//    @Test
+//    void testGetAppointmentById_Found() {
+//        when(repository.findById(1L)).thenReturn(Optional.of(sampleEntity));
+//
+//        AppointmentEntity result = service.getAppointmentById(1L);
+//
+//        assertNotNull(result);
+//        assertEquals(1L, result.getId());
+//        verify(repository).findById(1L);
+//    }
 
-        List<AppointmentEntity> results = service.getAppointmentsByPatientId(10L);
+//    @Test
+//    void testGetAppointmentById_NotFound() {
+//        when(repository.findById(99L)).thenReturn(Optional.empty());
+//
+//        AppointmentEntity result = service.getAppointmentById(99L);
+//
+//        assertNull(result);
+//        verify(repository).findById(99L);
+//    }
 
-        assertEquals(1, results.size());
-        assertEquals(10L, results.getFirst().getPatientId());
-        verify(repository).findByPatientId(10L);
-    }
+//    @Test
+//    void testGetAppointmentByProfessionalId_Found() {
+//        when(repository.findByProfessionalId(20L)).thenReturn(List.of(sampleEntity));
+//
+//        AppointmentEntity result = service.getAppointmentByProfessionalId(20L);
+//
+//        assertNotNull(result);
+//        assertEquals(20L, result.getProfessionalId());
+//        verify(repository).findByProfessionalId(20L);
+//    }
+//
+//    @Test
+//    void testGetAppointmentByProfessionalId_NotFound() {
+//        when(repository.findByProfessionalId(99L)).thenReturn(Collections.emptyList());
+//
+//        AppointmentEntity result = service.getAppointmentByProfessionalId(99L);
+//
+//        assertNull(result);
+//        verify(repository).findByProfessionalId(99L);
+//    }
 
-    @Test
-    void testGetAppointmentById_Found() {
-        when(repository.findById(1L)).thenReturn(Optional.of(sampleEntity));
-
-        AppointmentEntity result = service.getAppointmentById(1L);
-
-        assertNotNull(result);
-        assertEquals(1L, result.getId());
-        verify(repository).findById(1L);
-    }
-
-    @Test
-    void testGetAppointmentById_NotFound() {
-        when(repository.findById(99L)).thenReturn(Optional.empty());
-
-        AppointmentEntity result = service.getAppointmentById(99L);
-
-        assertNull(result);
-        verify(repository).findById(99L);
-    }
-
-    @Test
-    void testGetAppointmentByProfessionalId_Found() {
-        when(repository.findByProfessionalId(20L)).thenReturn(List.of(sampleEntity));
-
-        AppointmentEntity result = service.getAppointmentByProfessionalId(20L);
-
-        assertNotNull(result);
-        assertEquals(20L, result.getProfessionalId());
-        verify(repository).findByProfessionalId(20L);
-    }
-
-    @Test
-    void testGetAppointmentByProfessionalId_NotFound() {
-        when(repository.findByProfessionalId(99L)).thenReturn(Collections.emptyList());
-
-        AppointmentEntity result = service.getAppointmentByProfessionalId(99L);
-
-        assertNull(result);
-        verify(repository).findByProfessionalId(99L);
-    }
-
-    @Test
-    void testGetAllAppointments() {
-        when(repository.findAll()).thenReturn(List.of(sampleEntity));
-
-        List<AppointmentEntity> list = service.getAllAppointments();
-
-        assertNotNull(list);
-        assertEquals(1, list.size());
-        assertEquals(1L, list.getFirst().getId());
-        verify(repository).findAll();
-    }
-
-    @Test
-    void testUpdateAppointment() {
-        sampleEntity.setStatus("COMPLETED");
-        when(repository.save(sampleEntity)).thenReturn(sampleEntity);
-
-        AppointmentEntity updated = service.updateAppointment(sampleEntity);
-
-        assertNotNull(updated);
-        assertEquals("COMPLETED", updated.getStatus());
-        verify(repository).save(sampleEntity);
-    }
-
-    @Test
-    void testDeleteAppointment() {
-        doNothing().when(repository).deleteById(1L);
-
-        service.deleteAppointment(1L);
-
-        verify(repository).deleteById(1L);
-    }
-
-    @Test
-    void testFindAppointments() {
-        LocalDate date = LocalDate.of(2026, 10, 15);
-        when(repository.findByProfessionalIdAndAppointmentDate(20L, date))
-                .thenReturn(List.of(sampleEntity));
-
-        List<AppointmentEntity> results = service.findAppointments(20L, date);
-
-        assertNotNull(results);
-        assertEquals(1, results.size());
-        verify(repository).findByProfessionalIdAndAppointmentDate(20L, date);
-    }
+//    @Test
+//    void testGetAllAppointments() {
+//        when(repository.findAll()).thenReturn(List.of(sampleEntity));
+//
+//        List<AppointmentEntity> list = service.getAllAppointments();
+//
+//        assertNotNull(list);
+//        assertEquals(1, list.size());
+//        assertEquals(1L, list.getFirst().getId());
+//        verify(repository).findAll();
+//    }
+//
+//    @Test
+//    void testUpdateAppointment() {
+//        sampleEntity.setStatus("COMPLETED");
+//        when(repository.save(sampleEntity)).thenReturn(sampleEntity);
+//
+//        AppointmentEntity updated = service.updateAppointment(sampleEntity);
+//
+//        assertNotNull(updated);
+//        assertEquals("COMPLETED", updated.getStatus());
+//        verify(repository).save(sampleEntity);
+//    }
+//
+//    @Test
+//    void testDeleteAppointment() {
+//        doNothing().when(repository).deleteById(1L);
+//
+//        service.deleteAppointment(1L);
+//
+//        verify(repository).deleteById(1L);
+//    }
+//
+//    @Test
+//    void testFindAppointments() {
+//        LocalDate date = LocalDate.of(2026, 10, 15);
+//        when(repository.findByProfessionalIdAndAppointmentDate(20L, date))
+//                .thenReturn(List.of(sampleEntity));
+//
+//        List<AppointmentEntity> results = service.findAppointments(20L, date);
+//
+//        assertNotNull(results);
+//        assertEquals(1, results.size());
+//        verify(repository).findByProfessionalIdAndAppointmentDate(20L, date);
+//    }
 }

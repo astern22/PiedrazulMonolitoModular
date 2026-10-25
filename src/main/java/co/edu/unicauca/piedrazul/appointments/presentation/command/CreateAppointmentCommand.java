@@ -9,6 +9,5 @@ public record CreateAppointmentCommand(
         LocalDate appointmentDate,
         LocalTime startTime,
         LocalTime endTime
-
 ) {
 }

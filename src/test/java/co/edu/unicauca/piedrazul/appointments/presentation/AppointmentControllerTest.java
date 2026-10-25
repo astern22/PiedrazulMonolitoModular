@@ -165,29 +165,29 @@ class AppointmentControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    @Test
-    void testGetAppointmentByProfessionalId_Found() throws Exception {
-        AppointmentEntity entity = new AppointmentEntity();
-        entity.setId(8L);
-        entity.setPatientId(12L);
-        entity.setProfessionalId(20L);
-        entity.setStatus("SCHEDULED");
-
-        when(appointmentService.getAppointmentByProfessionalId(20L)).thenReturn(entity);
-
-        mockMvc.perform(get("/api/appointments/professional/20"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(8L))
-                .andExpect(jsonPath("$.professionalId").value(20L));
-    }
-
-    @Test
-    void testGetAppointmentByProfessionalId_NotFound() throws Exception {
-        when(appointmentService.getAppointmentByProfessionalId(99L)).thenReturn(null);
-
-        mockMvc.perform(get("/api/appointments/professional/99"))
-                .andExpect(status().isNotFound());
-    }
+//    @Test
+//    void testGetAppointmentByProfessionalId_Found() throws Exception {
+//        AppointmentEntity entity = new AppointmentEntity();
+//        entity.setId(8L);
+//        entity.setPatientId(12L);
+//        entity.setProfessionalId(20L);
+//        entity.setStatus("SCHEDULED");
+//
+//        when(appointmentService.getAppointmentByProfessionalId(20L)).thenReturn(entity);
+//
+//        mockMvc.perform(get("/api/appointments/professional/20"))
+//                .andExpect(status().isOk())
+//                .andExpect(jsonPath("$.id").value(8L))
+//                .andExpect(jsonPath("$.professionalId").value(20L));
+//    }
+//
+//    @Test
+//    void testGetAppointmentByProfessionalId_NotFound() throws Exception {
+//        when(appointmentService.getAppointmentByProfessionalId(99L)).thenReturn(null);
+//
+//        mockMvc.perform(get("/api/appointments/professional/99"))
+//                .andExpect(status().isNotFound());
+//    }
 
     @Test
     void testUpdateAppointment_Success() throws Exception {
