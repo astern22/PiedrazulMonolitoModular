@@ -21,18 +21,23 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth ->
-                        auth
-                                .requestMatchers(
-                                        "/auth/**"
-                                )
-                                .permitAll()
-                                // Solo el administrador gestiona cuentas internas (agendadores)
-                                .requestMatchers("/api/users/**")
-                                .hasRole("ADMIN")
-                                .anyRequest()
-                                .authenticated()
-                )
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/auth/**").permitAll()
+
+                        .requestMatchers("/api/users/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(
+                                org.springframework.http.HttpMethod.GET,
+                                "/api/appointments/my-appointments")
+                        .hasAnyRole("PATIENT", "ADMIN", "SCHEDULER")
+
+                        .requestMatchers(
+                                "/api/appointments",
+                                "/api/appointments/**")
+                        .hasAnyRole("ADMIN", "SCHEDULER")
+
+                        .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
