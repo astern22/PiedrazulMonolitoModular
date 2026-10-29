@@ -29,8 +29,13 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 org.springframework.http.HttpMethod.GET,
-                                "/api/appointments/my-appointments")
-                        .hasAnyRole("PATIENT", "ADMIN", "SCHEDULER")
+                                "/api/appointments/patient")
+                        .hasRole("PATIENT")
+
+                        .requestMatchers(
+                                org.springframework.http.HttpMethod.GET,
+                                "/api/appointments/patient/*")
+                        .hasAnyRole("ADMIN", "SCHEDULER")
 
                         .requestMatchers(
                                 "/api/appointments",

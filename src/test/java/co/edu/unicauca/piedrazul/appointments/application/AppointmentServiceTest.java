@@ -3,6 +3,10 @@ package co.edu.unicauca.piedrazul.appointments.application;
 import co.edu.unicauca.piedrazul.appointments.infrastructure.persistence.AppointmentEntity;
 import co.edu.unicauca.piedrazul.appointments.infrastructure.persistence.AppointmentRepository;
 import co.edu.unicauca.piedrazul.appointments.presentation.command.CreateAppointmentCommand;
+import co.edu.unicauca.piedrazul.patients.infrastructure.persistence.PatientEntity;
+import co.edu.unicauca.piedrazul.patients.infrastructure.persistence.PatientRepository;
+import co.edu.unicauca.piedrazul.users.infrastructure.persistence.UserEntity;
+import co.edu.unicauca.piedrazul.users.infrastructure.persistence.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +30,12 @@ class AppointmentServiceTest {
 
     @Mock
     private AppointmentRepository repository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private PatientRepository patientRepository;
 
     @InjectMocks
     private AppointmentService service;
@@ -199,5 +209,55 @@ class AppointmentServiceTest {
         assertNotNull(results);
         assertEquals(1, results.size());
         verify(repository).findByProfessionalIdAndAppointmentDate(20L, date);
+    }
+
+    @Test
+    void testGetAppointmentsByUsername_Success() {
+        UserEntity user = new UserEntity();
+        user.setId(5L);
+        user.setUsername("juanperez");
+
+        PatientEntity patient = new PatientEntity();
+        patient.setId(10L);
+        patient.setUserId(5L);
+
+        when(userRepository.findByUsername("juanperez")).thenReturn(Optional.of(user));
+        when(patientRepository.findByUserId(5L)).thenReturn(Optional.of(patient));
+        when(repository.findByPatientId(10L)).thenReturn(List.of(sampleEntity));
+
+        List<AppointmentEntity> results = service.getAppointmentsByUsername("juanperez");
+
+        assertEquals(1, results.size());
+        assertEquals(10L, results.getFirst().getPatientId());
+        verify(userRepository).findByUsername("juanperez");
+        verify(patientRepository).findByUserId(5L);
+        verify(repository).findByPatientId(10L);
+    }
+
+    @Test
+    void testGetAppointmentsByUsername_UserNotFound() {
+        when(userRepository.findByUsername("unknown")).thenReturn(Optional.empty());
+
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> service.getAppointmentsByUsername("unknown"));
+
+        assertEquals("Usuario no encontrado: unknown", exception.getMessage());
+        verify(repository, never()).findByPatientId(any());
+    }
+
+    @Test
+    void testGetAppointmentsByUsername_PatientNotFound() {
+        UserEntity user = new UserEntity();
+        user.setId(5L);
+        user.setUsername("juanperez");
+
+        when(userRepository.findByUsername("juanperez")).thenReturn(Optional.of(user));
+        when(patientRepository.findByUserId(5L)).thenReturn(Optional.empty());
+
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> service.getAppointmentsByUsername("juanperez"));
+
+        assertEquals("No se encontro un paciente vinculado a tu usuario", exception.getMessage());
+        verify(repository, never()).findByPatientId(any());
     }
 }

@@ -10,6 +10,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -119,6 +120,24 @@ class AppointmentControllerTest {
         mockMvc.perform(get("/api/appointments/patient/99"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    void testGetAppointmentsForCurrentPatient() throws Exception {
+        AppointmentEntity entity = new AppointmentEntity();
+        entity.setId(1L);
+        entity.setPatientId(10L);
+        entity.setProfessionalId(20L);
+        entity.setStatus("SCHEDULED");
+
+        when(appointmentService.getAppointmentsByUsername("juanperez")).thenReturn(List.of(entity));
+
+        TestingAuthenticationToken auth = new TestingAuthenticationToken("juanperez", null);
+
+        mockMvc.perform(get("/api/appointments/patient").principal(auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1L))
+                .andExpect(jsonPath("$[0].patientId").value(10L));
     }
 
     @Test

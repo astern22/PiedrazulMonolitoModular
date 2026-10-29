@@ -9,9 +9,11 @@ import co.edu.unicauca.piedrazul.appointments.presentation.command.CreateAppoint
 import co.edu.unicauca.piedrazul.appointments.presentation.dto.AppointmentRequest;
 import co.edu.unicauca.piedrazul.appointments.presentation.dto.AppointmentResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+
 
 @RestController 
 @RequestMapping("/api/appointments")
@@ -94,6 +96,12 @@ public class AppointmentController {
     @GetMapping("/patient/{patientId}")
     public ResponseEntity<List<AppointmentEntity>> getAppointmentsByPatientId(@PathVariable Long patientId) {
         return ResponseEntity.ok(service.getAppointmentsByPatientId(patientId));
+    }
+
+    @GetMapping("/patient")
+    public ResponseEntity<List<AppointmentEntity>> getAppointmentsForCurrentPatient(Authentication authentication) {
+        String username = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(service.getAppointmentsByUsername(username));
     }
 
     @DeleteMapping("/{id}")

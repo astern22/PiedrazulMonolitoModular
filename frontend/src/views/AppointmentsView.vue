@@ -176,9 +176,7 @@ async function fetchAppointments() {
   try {
     // Un paciente solo debe ver SUS PROPIAS citas, nunca las de otros pacientes.
     if (isPatient.value) {
-      appointments.value = currentPatient.value
-        ? await appointmentService.getByPatientId(currentPatient.value.id)
-        : [];
+      appointments.value = await appointmentService.getMyAppointments();
     } else {
       appointments.value = await appointmentService.getAll();
     }

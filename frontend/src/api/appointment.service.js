@@ -92,7 +92,25 @@ export const appointmentService = {
     return response.data
   },
 
+  /**
+   * Obtiene las citas del paciente autenticado (/api/appointments/patient).
+   * @returns {Promise<Array<Object>>}
+   */
+  async getMyAppointments() {
+    const response = await apiClient.get('/api/appointments/patient')
+    return response.data
+  },
+
+  /**
+   * Obtiene la lista de citas asociadas a un paciente especifico por su ID.
+   * Si no se proporciona ID, consulta las citas del paciente autenticado.
+   * @param {number|string} [patientId] - Identificador del paciente
+   * @returns {Promise<Array<Object>>}
+   */
   async getByPatientId(patientId) {
+    if (!patientId) {
+      return this.getMyAppointments()
+    }
     const response = await apiClient.get(`/api/appointments/patient/${patientId}`)
     return response.data
   }
