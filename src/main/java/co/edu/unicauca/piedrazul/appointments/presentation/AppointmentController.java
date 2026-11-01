@@ -76,13 +76,13 @@ public class AppointmentController {
     }
 
     @GetMapping("/professional/{professionalId}")
-    public ResponseEntity<AppointmentEntity> getAppointmentByProfessionalId(@PathVariable("professionalId") Long professionalId) {
-        AppointmentEntity appointment = service.getAppointmentByProfessionalId(professionalId);
-        if (appointment != null) {
-            return ResponseEntity.ok(appointment);
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<List<AppointmentEntity>> getAppointmentsByProfessionalId(
+            @PathVariable Long professionalId) {
+
+        List<AppointmentEntity> appointments =
+                service.getAppointmentsByProfessionalId(professionalId);
+
+        return ResponseEntity.ok(appointments);
     }
 
     @GetMapping
