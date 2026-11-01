@@ -3,6 +3,7 @@ package co.edu.unicauca.piedrazul.appointments.application;
 import co.edu.unicauca.piedrazul.appointments.infrastructure.persistence.AppointmentEntity;
 import co.edu.unicauca.piedrazul.appointments.infrastructure.persistence.AppointmentRepository;
 import co.edu.unicauca.piedrazul.appointments.presentation.command.CreateAppointmentCommand;
+import co.edu.unicauca.piedrazul.patients.infrastructure.persistence.PatientEntity;
 import co.edu.unicauca.piedrazul.patients.infrastructure.persistence.PatientRepository;
 import co.edu.unicauca.piedrazul.professionals.infrastructure.persistence.ProfessionalEntity;
 import co.edu.unicauca.piedrazul.professionals.infrastructure.persistence.ProfessionalRepository;
@@ -178,6 +179,22 @@ public class AppointmentService {
     
     public List<AppointmentEntity> getAppointmentsByPatientId(Long patientId) {
     return repository.findByPatientId(patientId);
+    }
+
+    public List<AppointmentEntity> getAppointmentHistoryByDocumentNumber(
+            String documentNumber) {
+
+        if (documentNumber == null || documentNumber.isBlank()) {
+            throw new IllegalArgumentException(
+                    "La cédula del paciente es obligatoria.");
+        }
+
+        PatientEntity patient = patientRepository
+                .findByDocumentNumber(documentNumber.trim())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No existe un paciente con la cédula indicada."));
+
+        return repository.findByPatientId(patient.getId());
     }
 }
 

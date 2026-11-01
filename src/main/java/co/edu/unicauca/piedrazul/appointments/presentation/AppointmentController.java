@@ -117,5 +117,21 @@ public class AppointmentController {
                 date
         );
     }
+
+    @GetMapping("/patient/document/{documentNumber}/history")
+    public ResponseEntity<?> getAppointmentHistoryByDocumentNumber(
+            @PathVariable String documentNumber) {
+
+        try {
+            List<AppointmentEntity> appointments =
+                    service.getAppointmentHistoryByDocumentNumber(documentNumber);
+
+            return ResponseEntity.ok(appointments);
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
 }
 
