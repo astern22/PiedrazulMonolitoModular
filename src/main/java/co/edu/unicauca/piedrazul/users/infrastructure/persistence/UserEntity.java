@@ -32,6 +32,9 @@ public class UserEntity {
     )
     private Set<RoleEntity> roles = new HashSet<>();
 
+    @Column(name = "keycloak_user_id", unique = true, length = 100)
+    private String keycloakUserId;
+
     public UserEntity() {
     }
 
@@ -89,5 +92,13 @@ public class UserEntity {
 
     public void setRoles(Set<RoleEntity> roles) {
         this.roles = roles;
+    }
+
+    public String getKeycloakUserId() {
+        return keycloakUserId;
+    }
+
+    public void setKeycloakUserId(String keycloakUserId) {
+        this.keycloakUserId = keycloakUserId;
     }
 }
