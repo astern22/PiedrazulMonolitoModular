@@ -9,6 +9,7 @@ import co.edu.unicauca.piedrazul.appointments.presentation.command.CreateAppoint
 import co.edu.unicauca.piedrazul.appointments.presentation.dto.AppointmentRequest;
 import co.edu.unicauca.piedrazul.appointments.presentation.dto.AppointmentResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -24,10 +25,16 @@ public class AppointmentController {
     }
 
     @PostMapping("/create")
-        public ResponseEntity<?> createAppointment(@Valid @RequestBody AppointmentRequest request) {
+        public ResponseEntity<?> createAppointment(@Valid @RequestBody AppointmentRequest request,
+                                                   Authentication authentication) {
             try {
+                // Un paciente solo puede agendar para si mismo: se ignora el patientId del cuerpo
+                Long patientId = isPatient(authentication)
+                    ? service.getPatientIdByUsername((String) authentication.getPrincipal())
+                    : request.patientId();
+
                 CreateAppointmentCommand command = new CreateAppointmentCommand(
-                    request.patientId(), request.professionalId(), request.appointmentDate(),
+                    patientId, request.professionalId(), request.appointmentDate(),
                     request.startTime(), request.endTime());
 
                 AppointmentEntity createdAppointment = service.createAppointment(command);
@@ -76,19 +83,24 @@ public class AppointmentController {
     }
 
     @GetMapping("/professional/{professionalId}")
-    public ResponseEntity<AppointmentEntity> getAppointmentByProfessionalId(@PathVariable("professionalId") Long professionalId) {
-        AppointmentEntity appointment = service.getAppointmentByProfessionalId(professionalId);
-        if (appointment != null) {
-            return ResponseEntity.ok(appointment);
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<List<AppointmentEntity>> getAppointmentsByProfessionalId(@PathVariable("professionalId") Long professionalId) {
+        return ResponseEntity.ok(service.getAppointmentsByProfessionalId(professionalId));
     }
 
     @GetMapping
     public ResponseEntity<List<AppointmentEntity>> getAllAppointments() {
         List<AppointmentEntity> appointments = service.getAllAppointments();
         return ResponseEntity.ok(appointments);
+    }
+
+    /** Citas del paciente autenticado (solo rol PATIENT, ver SecurityConfig). */
+    @GetMapping("/me")
+    public ResponseEntity<List<AppointmentEntity>> getMyAppointments(
+            Authentication authentication,
+            @RequestParam(required = false) Long professionalId,
+            @RequestParam(required = false) LocalDate date) {
+        return ResponseEntity.ok(service.getAppointmentsByUsername(
+                (String) authentication.getPrincipal(), professionalId, date));
     }
 
     @GetMapping("/patient/{patientId}")
@@ -109,13 +121,17 @@ public class AppointmentController {
 
     @GetMapping("/search")
     public List<AppointmentEntity> search(
-            @RequestParam Long professionalId,
-            @RequestParam LocalDate date) {
+            @RequestParam(required = false) Long professionalId,
+            @RequestParam(required = false) LocalDate date) {
 
         return service.findAppointments(
                 professionalId,
                 date
         );
     }
-}
 
+    private boolean isPatient(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_PATIENT".equals(a.getAuthority()));
+    }
+}

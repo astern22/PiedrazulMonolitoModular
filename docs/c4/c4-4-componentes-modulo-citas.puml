@@ -8,16 +8,16 @@ title C4 Model - Nivel 3: Componentes del Modulo de Citas Medicas
 
 Container_Boundary(api, "API REST Piedrazul") {
 
-    Component(controller, "AppointmentController", "Spring MVC", "REST /api/appointments. Crear, actualizar, consultar por id/profesional, listar, eliminar y buscar por profesional+fecha (/search).", $tags="presentation")
+    Component(controller, "AppointmentController", "Spring MVC", "REST /api/appointments. Crear, actualizar, consultar por id/profesional (lista), listar, eliminar y buscar por profesional y/o fecha (/search).", $tags="presentation")
     Component(cmd, "CreateAppointmentCommand", "Java record", "Comando de creacion de cita (patientId, professionalId, appointmentDate, startTime, endTime).")
     Component(apptDto, "AppointmentRequest / AppointmentResponse", "Java record", "DTOs de entrada y salida de la cita.")
 
-    Component(apptSvc, "AppointmentService", "Spring @Service", "Reglas de negocio de citas: crear con estado SCHEDULED, consultar, actualizar, eliminar y findAppointments(professional, date).")
+    Component(apptSvc, "AppointmentService", "Spring @Service", "Reglas de negocio de citas: crear con estado SCHEDULED validando que no haya choque de horario (409), consultar, actualizar, eliminar y findAppointments(professional, date) con cualquiera de los dos filtros.")
 
     Component(appt, "Appointment", "Clase de dominio", "Entidad de dominio de la cita (patientId, professionalId, appointmentDate, startTime, endTime, status, createdAt).")
 
     Component(apptEntity, "AppointmentEntity", "JPA @Entity", "Tabla appointments. Genera createdAt en @PrePersist.")
-    Component(apptRepo, "AppointmentRepository", "Spring Data JPA", "Acceso a appointments: findByProfessionalIdAndAppointmentDate, findByProfessionalId.")
+    Component(apptRepo, "AppointmentRepository", "Spring Data JPA", "Acceso a appointments: findByProfessionalIdAndAppointmentDate, findByProfessionalId, findByAppointmentDate.")
 
 }
 

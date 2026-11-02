@@ -3,6 +3,8 @@ package co.edu.unicauca.piedrazul.appointments.application;
 import co.edu.unicauca.piedrazul.appointments.infrastructure.persistence.AppointmentEntity;
 import co.edu.unicauca.piedrazul.appointments.infrastructure.persistence.AppointmentRepository;
 import co.edu.unicauca.piedrazul.appointments.presentation.command.CreateAppointmentCommand;
+import co.edu.unicauca.piedrazul.patients.application.PatientService;
+import co.edu.unicauca.piedrazul.patients.presentation.dto.PatientResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +28,9 @@ class AppointmentServiceTest {
 
     @Mock
     private AppointmentRepository repository;
+
+    @Mock
+    private PatientService patientService;
 
     @InjectMocks
     private AppointmentService service;
@@ -135,23 +140,23 @@ class AppointmentServiceTest {
     }
 
     @Test
-    void testGetAppointmentByProfessionalId_Found() {
+    void testGetAppointmentsByProfessionalId_Found() {
         when(repository.findByProfessionalId(20L)).thenReturn(List.of(sampleEntity));
 
-        AppointmentEntity result = service.getAppointmentByProfessionalId(20L);
+        List<AppointmentEntity> result = service.getAppointmentsByProfessionalId(20L);
 
-        assertNotNull(result);
-        assertEquals(20L, result.getProfessionalId());
+        assertEquals(1, result.size());
+        assertEquals(20L, result.getFirst().getProfessionalId());
         verify(repository).findByProfessionalId(20L);
     }
 
     @Test
-    void testGetAppointmentByProfessionalId_NotFound() {
+    void testGetAppointmentsByProfessionalId_NoAppointments_ReturnsEmptyList() {
         when(repository.findByProfessionalId(99L)).thenReturn(Collections.emptyList());
 
-        AppointmentEntity result = service.getAppointmentByProfessionalId(99L);
+        List<AppointmentEntity> result = service.getAppointmentsByProfessionalId(99L);
 
-        assertNull(result);
+        assertTrue(result.isEmpty());
         verify(repository).findByProfessionalId(99L);
     }
 
@@ -199,5 +204,129 @@ class AppointmentServiceTest {
         assertNotNull(results);
         assertEquals(1, results.size());
         verify(repository).findByProfessionalIdAndAppointmentDate(20L, date);
+    }
+
+    @Test
+    void testFindAppointments_OnlyProfessional() {
+        when(repository.findByProfessionalId(20L)).thenReturn(List.of(sampleEntity));
+
+        List<AppointmentEntity> results = service.findAppointments(20L, null);
+
+        assertEquals(1, results.size());
+        verify(repository).findByProfessionalId(20L);
+    }
+
+    @Test
+    void testFindAppointments_OnlyDate() {
+        LocalDate date = LocalDate.of(2026, 10, 15);
+        when(repository.findByAppointmentDate(date)).thenReturn(List.of(sampleEntity));
+
+        List<AppointmentEntity> results = service.findAppointments(null, date);
+
+        assertEquals(1, results.size());
+        verify(repository).findByAppointmentDate(date);
+    }
+
+    @Test
+    void testFindAppointments_OrderedByDateAndStartTime() {
+        AppointmentEntity later = new AppointmentEntity();
+        later.setAppointmentDate(LocalDate.of(2026, 10, 16));
+        later.setStartTime(LocalTime.of(8, 0));
+        AppointmentEntity sameDayLate = new AppointmentEntity();
+        sameDayLate.setAppointmentDate(LocalDate.of(2026, 10, 15));
+        sameDayLate.setStartTime(LocalTime.of(11, 0));
+        // sampleEntity: 2026-10-15 09:00
+        when(repository.findByProfessionalId(20L))
+                .thenReturn(List.of(later, sameDayLate, sampleEntity));
+
+        List<AppointmentEntity> results = service.findAppointments(20L, null);
+
+        assertEquals(List.of(sampleEntity, sameDayLate, later), results);
+    }
+
+    @Test
+    void testFindAppointments_NoFilters_ThrowsException() {
+        assertThrows(IllegalArgumentException.class, () -> service.findAppointments(null, null));
+    }
+
+    @Test
+    void testCreateAppointment_OverlappingSlot_ThrowsConflict() {
+        LocalDate futureDate = LocalDate.now().plusDays(10);
+        sampleEntity.setAppointmentDate(futureDate);
+        when(repository.findByProfessionalIdAndAppointmentDate(20L, futureDate))
+                .thenReturn(List.of(sampleEntity));
+
+        CreateAppointmentCommand command = new CreateAppointmentCommand(
+                11L, 20L, futureDate, LocalTime.of(9, 30), LocalTime.of(10, 30));
+
+        org.springframework.web.server.ResponseStatusException ex = assertThrows(
+                org.springframework.web.server.ResponseStatusException.class,
+                () -> service.createAppointment(command));
+
+        assertEquals(409, ex.getStatusCode().value());
+        assertEquals("El horario ya no está disponible. Por favor selecciona otra franja.", ex.getReason());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void testCreateAppointment_AdjacentSlot_IsAllowed() {
+        LocalDate futureDate = LocalDate.now().plusDays(10);
+        sampleEntity.setAppointmentDate(futureDate);
+        when(repository.findByProfessionalIdAndAppointmentDate(20L, futureDate))
+                .thenReturn(List.of(sampleEntity));
+        when(repository.save(any(AppointmentEntity.class))).thenAnswer(i -> i.getArgument(0));
+
+        CreateAppointmentCommand command = new CreateAppointmentCommand(
+                11L, 20L, futureDate, LocalTime.of(10, 0), LocalTime.of(11, 0));
+
+        assertNotNull(service.createAppointment(command));
+    }
+
+    @Test
+    void testCreateAppointment_CancelledSlotDoesNotBlock() {
+        LocalDate futureDate = LocalDate.now().plusDays(10);
+        sampleEntity.setAppointmentDate(futureDate);
+        sampleEntity.setStatus("CANCELLED");
+        when(repository.findByProfessionalIdAndAppointmentDate(20L, futureDate))
+                .thenReturn(List.of(sampleEntity));
+        when(repository.save(any(AppointmentEntity.class))).thenAnswer(i -> i.getArgument(0));
+
+        CreateAppointmentCommand command = new CreateAppointmentCommand(
+                11L, 20L, futureDate, LocalTime.of(9, 0), LocalTime.of(10, 0));
+
+        assertNotNull(service.createAppointment(command));
+    }
+
+    @Test
+    void testGetAppointmentsByUsername_OnlyReturnsOwnAppointments() {
+        PatientResponse patient = new PatientResponse(10L, 5L, "123", null, null, "Ana", "ana@mail.com");
+        when(patientService.findByCurrentUser("ana")).thenReturn(patient);
+        when(repository.findByPatientId(10L)).thenReturn(List.of(sampleEntity));
+
+        List<AppointmentEntity> result = service.getAppointmentsByUsername("ana", null, null);
+
+        assertEquals(1, result.size());
+        assertEquals(10L, result.getFirst().getPatientId());
+        verify(repository).findByPatientId(10L);
+        verify(repository, never()).findAll();
+    }
+
+    @Test
+    void testGetAppointmentsByUsername_FiltersWithinOwnAppointments() {
+        PatientResponse patient = new PatientResponse(10L, 5L, "123", null, null, "Ana", "ana@mail.com");
+        when(patientService.findByCurrentUser("ana")).thenReturn(patient);
+        when(repository.findByPatientId(10L)).thenReturn(List.of(sampleEntity));
+
+        assertEquals(1, service.getAppointmentsByUsername("ana", 20L, LocalDate.of(2026, 10, 15)).size());
+        assertTrue(service.getAppointmentsByUsername("ana", 99L, null).isEmpty());
+        assertTrue(service.getAppointmentsByUsername("ana", null, LocalDate.of(2026, 1, 1)).isEmpty());
+    }
+
+    @Test
+    void testGetPatientIdByUsername() {
+        PatientResponse patient = new PatientResponse(10L, 5L, "123", null, null, "Ana", "ana@mail.com");
+        when(patientService.findByCurrentUser("ana")).thenReturn(patient);
+
+        assertEquals(10L, service.getPatientIdByUsername("ana"));
     }
 }

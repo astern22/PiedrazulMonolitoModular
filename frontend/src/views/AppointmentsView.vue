@@ -175,11 +175,9 @@ async function fetchAppointments() {
   errorMessage.value = "";
   isFiltered.value = false;
   try {
-    // Un paciente solo debe ver SUS PROPIAS citas, nunca las de otros pacientes.
+    // Un paciente solo ve SUS PROPIAS citas (el backend las filtra por el token).
     if (isPatient.value) {
-      appointments.value = currentPatient.value
-        ? await appointmentService.getByPatientId(currentPatient.value.id)
-        : [];
+      appointments.value = await appointmentService.getMine();
     } else {
       appointments.value = await appointmentService.getAll();
     }
@@ -239,8 +237,8 @@ function selectSlot(slot, index) {
 }
 
 async function handleSearch() {
-  if (!filter.value.professionalId || !filter.value.date) {
-    errorMessage.value = "Para buscar, selecciona el profesional y la fecha.";
+  if (!filter.value.professionalId && !filter.value.date) {
+    errorMessage.value = "Para buscar, selecciona un profesional o una fecha.";
     return;
   }
 
@@ -248,10 +246,14 @@ async function handleSearch() {
   errorMessage.value = "";
   isFiltered.value = true;
   try {
-    appointments.value = await appointmentService.search({
-      professionalId: filter.value.professionalId,
-      date: filter.value.date,
-    });
+    const params = {
+      professionalId: filter.value.professionalId || undefined,
+      date: filter.value.date || undefined,
+    };
+    // El paciente busca solo dentro de sus propias citas (el backend lo garantiza)
+    appointments.value = isPatient.value
+      ? await appointmentService.getMine(params)
+      : await appointmentService.search(params);
   } catch (error) {
     errorMessage.value =
       error.message || "Error al buscar citas con los criterios indicados.";
@@ -267,12 +269,15 @@ function handleClearSearch() {
   fetchAppointments();
 }
 
+// Excel con configuracion regional en español separa las columnas con punto y coma
+const CSV_SEPARATOR = ";";
+
 async function exportToCSV() {
   isExporting.value = true;
   const escapeCSV = (value) => {
     if (value === null || value === undefined) return "";
     const str = String(value);
-    if (str.includes(",") || str.includes("\n") || str.includes('"')) {
+    if (str.includes(CSV_SEPARATOR) || str.includes(",") || str.includes("\n") || str.includes('"')) {
       return `"${str.replace(/"/g, '""')}"`;
     }
     return str;
@@ -291,6 +296,11 @@ async function exportToCSV() {
     const patientResults = await Promise.allSettled(
       patientIds.map((id) => patientService.getById(id)),
     );
+    const failedLookups = patientResults.filter((r) => r.status === "rejected");
+    if (failedLookups.length > 0) {
+      console.warn("No se pudo cargar el paciente:", failedLookups.map((r) => r.reason));
+      errorMessage.value = `No se pudieron cargar los datos de ${failedLookups.length} paciente(s); en el archivo aparecen sin nombre ni documento.`;
+    }
     const patientsById = new Map();
     patientResults.forEach((result, index) => {
       if (result.status === "fulfilled" && result.value) {
@@ -329,7 +339,7 @@ async function exportToCSV() {
       };
     });
 
-    const headers = columns.map((col) => escapeCSV(col.label)).join(",");
+    const headers = columns.map((col) => escapeCSV(col.label)).join(CSV_SEPARATOR);
     const rows = dataToExport.map((item) =>
       columns
         .map((col) => {
@@ -340,7 +350,7 @@ async function exportToCSV() {
           }
           return escapeCSV(value);
         })
-        .join(","),
+        .join(CSV_SEPARATOR),
     );
 
     const csvContent = [headers, ...rows].join("\r\n");
@@ -353,7 +363,8 @@ async function exportToCSV() {
 
     const link = document.createElement("a");
     link.href = url;
-    const dateStr = new Date().toISOString().split("T")[0];
+    // El nombre usa la fecha del filtro; si se filtro solo por profesional, la fecha de hoy
+    const dateStr = filter.value.date || new Date().toISOString().split("T")[0];
     link.setAttribute("download", `citas_medicas_${dateStr}.csv`);
 
     document.body.appendChild(link);
@@ -654,12 +665,12 @@ onMounted(async () => {
 
     <!-- Barra de busqueda y filtros -->
     <div class="card filter-card">
-      <h4>Filtrar Citas por Profesional y Fecha</h4>
+      <h4>Filtrar Citas por Profesional o Fecha</h4>
       <form @submit.prevent="handleSearch" class="filter-form">
         <div class="form-group">
           <label for="filterProfId">Profesional</label>
           <select id="filterProfId" v-model="filter.professionalId">
-            <option value="">Selecciona un profesional</option>
+            <option value="">Todos los profesionales</option>
             <option
               v-for="prof in professionals"
               :key="prof.id"
@@ -694,7 +705,7 @@ onMounted(async () => {
       <div class="table-header" style="display: flex; justify-content: space-between; align-items: baseline;">
         <h3>Citas Medicas ({{ appointments.length }})</h3>
         <button
-          v-if="appointments.length > 0"
+          v-if="isFiltered && appointments.length > 0"
           @click="exportToCSV"
           type="button"
           class="btn btn-primary"
