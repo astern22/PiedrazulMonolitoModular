@@ -21,6 +21,7 @@ const professionals = computed(() =>
 const fieldErrors = ref({});
 const isLoading = ref(false);
 const isSubmitting = ref(false);
+const isExporting = ref(false);
 const errorMessage = ref("");
 const successMessage = ref("");
 const showCreateForm = ref(false);
@@ -174,11 +175,9 @@ async function fetchAppointments() {
   errorMessage.value = "";
   isFiltered.value = false;
   try {
-    // Un paciente solo debe ver SUS PROPIAS citas, nunca las de otros pacientes.
+    // Un paciente solo ve SUS PROPIAS citas (el backend las filtra por el token).
     if (isPatient.value) {
-      appointments.value = currentPatient.value
-        ? await appointmentService.getByPatientId(currentPatient.value.id)
-        : [];
+      appointments.value = await appointmentService.getMine();
     } else {
       appointments.value = await appointmentService.getAll();
     }
@@ -238,8 +237,8 @@ function selectSlot(slot, index) {
 }
 
 async function handleSearch() {
-  if (!filter.value.professionalId || !filter.value.date) {
-    errorMessage.value = "Para buscar, selecciona el profesional y la fecha.";
+  if (!filter.value.professionalId && !filter.value.date) {
+    errorMessage.value = "Para buscar, selecciona un profesional o una fecha.";
     return;
   }
 
@@ -247,10 +246,14 @@ async function handleSearch() {
   errorMessage.value = "";
   isFiltered.value = true;
   try {
-    appointments.value = await appointmentService.search({
-      professionalId: filter.value.professionalId,
-      date: filter.value.date,
-    });
+    const params = {
+      professionalId: filter.value.professionalId || undefined,
+      date: filter.value.date || undefined,
+    };
+    // El paciente busca solo dentro de sus propias citas (el backend lo garantiza)
+    appointments.value = isPatient.value
+      ? await appointmentService.getMine(params)
+      : await appointmentService.search(params);
   } catch (error) {
     errorMessage.value =
       error.message || "Error al buscar citas con los criterios indicados.";
@@ -266,35 +269,8 @@ function handleClearSearch() {
   fetchAppointments();
 }
 
-function exportToCSV() {
-  if (!appointments.value || appointments.value.length === 0) {
-    errorMessage.value = "No hay datos para exportar.";
-    return;
-  }
-
-  const columns = [
-    { key: "id", label: "ID" },
-    { key: "patientId", label: "ID Paciente" },
-    { key: "professionalName", label: "Profesional" },
-    { key: "appointmentDate", label: "Fecha" },
-    { key: "startTime", label: "Hora Inicio" },
-    { key: "endTime", label: "Hora Fin" },
-    { key: "status", label: "Estado" },
-  ];
-
-  const dataToExport = appointments.value.map((item) => ({
-    id: item.id,
-    patientId: item.patientId,
-    professionalName: professionalNameById(
-      allProfessionals.value,
-      item.professionalId,
-    ),
-    appointmentDate: item.appointmentDate,
-    startTime: item.startTime,
-    endTime: item.endTime,
-    status: item.status,
-  }));
-
+async function exportToCSV() {
+  isExporting.value = true;
   const escapeCSV = (value) => {
     if (value === null || value === undefined) return "";
     const str = String(value);
@@ -304,29 +280,95 @@ function exportToCSV() {
     return str;
   };
 
-  const headers = columns.map((col) => escapeCSV(col.label)).join(",");
-  const rows = dataToExport.map((item) =>
-    columns.map((col) => escapeCSV(item[col.key])).join(","),
-  );
+  errorMessage.value = "";
+  try {
+    if (!appointments.value || appointments.value.length === 0) {
+      errorMessage.value = "No hay datos para exportar.";
+      return;
+    }
 
-  const csvContent = [headers, ...rows].join("\r\n");
+    const patientIds = [
+      ...new Set(appointments.value.map((item) => item.patientId)),
+    ];
+    const patientResults = await Promise.allSettled(
+      patientIds.map((id) => patientService.getById(id)),
+    );
+    const patientsById = new Map();
+    patientResults.forEach((result, index) => {
+      if (result.status === "fulfilled" && result.value) {
+        patientsById.set(patientIds[index], {
+          fullName: result.value.fullName,
+          documentNumber: result.value.documentNumber,
+        });
+      }
+    });
 
-  const BOM = "\uFEFF";
-  const blob = new Blob([BOM + csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
-  const url = URL.createObjectURL(blob);
+    const columns = [
+      { key: "id", label: "ID" },
+      { key: "patientName", label: "Paciente" },
+      { key: "documentNumber", label: "Documento" },
+      { key: "professionalName", label: "Profesional" },
+      { key: "appointmentDate", label: "Fecha" },
+      { key: "startTime", label: "Hora Inicio" },
+      { key: "endTime", label: "Hora Fin" },
+      { key: "status", label: "Estado" },
+    ];
 
-  const link = document.createElement("a");
-  link.href = url;
-  const dateStr = new Date().toISOString().split("T")[0];
-  link.setAttribute("download", `citas_medicas_${dateStr}.csv`);
+    const dataToExport = appointments.value.map((item) => {
+      const patient = patientsById.get(item.patientId);
+      return {
+        id: item.id,
+        patientName: patient?.fullName || `Paciente #${item.patientId}`,
+        documentNumber: patient?.documentNumber || "",
+        professionalName: professionalNameById(
+          allProfessionals.value,
+          item.professionalId,
+        ),
+        appointmentDate: item.appointmentDate,
+        startTime: item.startTime,
+        endTime: item.endTime,
+        status: item.status,
+      };
+    });
 
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+    const headers = columns.map((col) => escapeCSV(col.label)).join(",");
+    const rows = dataToExport.map((item) =>
+      columns
+        .map((col) => {
+          const value = item[col.key];
+          if (col.key === "documentNumber" && value) {
+            const formulaText = String(value).replace(/"/g, '""');
+            return escapeCSV(`="${formulaText}"`);
+          }
+          return escapeCSV(value);
+        })
+        .join(","),
+    );
 
-  URL.revokeObjectURL(url);
+    const csvContent = [headers, ...rows].join("\r\n");
+
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    // El nombre usa la fecha del filtro; si se filtro solo por profesional, la fecha de hoy
+    const dateStr = filter.value.date || new Date().toISOString().split("T")[0];
+    link.setAttribute("download", `citas_medicas_${dateStr}.csv`);
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    errorMessage.value = error.message || "No se pudo exportar las citas.";
+  } finally {
+    isExporting.value = false;
+  }
 }
 
 async function handleCreate() {
@@ -615,12 +657,12 @@ onMounted(async () => {
 
     <!-- Barra de busqueda y filtros -->
     <div class="card filter-card">
-      <h4>Filtrar Citas por Profesional y Fecha</h4>
+      <h4>Filtrar Citas por Profesional o Fecha</h4>
       <form @submit.prevent="handleSearch" class="filter-form">
         <div class="form-group">
           <label for="filterProfId">Profesional</label>
           <select id="filterProfId" v-model="filter.professionalId">
-            <option value="">Selecciona un profesional</option>
+            <option value="">Todos los profesionales</option>
             <option
               v-for="prof in professionals"
               :key="prof.id"
@@ -655,11 +697,11 @@ onMounted(async () => {
       <div class="table-header" style="display: flex; justify-content: space-between; align-items: baseline;">
         <h3>Citas Medicas ({{ appointments.length }})</h3>
         <button
-          v-if="appointments.length > 0 && isFiltered"
+          v-if="isFiltered && appointments.length > 0"
           @click="exportToCSV"
           type="button"
           class="btn btn-primary"
-          :disabled="isLoading"
+          :disabled="isLoading || isExporting"
         >
           Exportar a CSV
         </button>

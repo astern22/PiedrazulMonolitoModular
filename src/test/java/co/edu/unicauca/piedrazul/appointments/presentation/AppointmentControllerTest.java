@@ -10,6 +10,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -166,27 +168,29 @@ class AppointmentControllerTest {
     }
 
     @Test
-    void testGetAppointmentByProfessionalId_Found() throws Exception {
+    void testGetAppointmentsByProfessionalId_Found() throws Exception {
         AppointmentEntity entity = new AppointmentEntity();
         entity.setId(8L);
         entity.setPatientId(12L);
         entity.setProfessionalId(20L);
         entity.setStatus("SCHEDULED");
 
-        when(appointmentService.getAppointmentByProfessionalId(20L)).thenReturn(entity);
+        when(appointmentService.getAppointmentsByProfessionalId(20L)).thenReturn(List.of(entity));
 
         mockMvc.perform(get("/api/appointments/professional/20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(8L))
-                .andExpect(jsonPath("$.professionalId").value(20L));
+                .andExpect(jsonPath("$[0].id").value(8L))
+                .andExpect(jsonPath("$[0].professionalId").value(20L));
     }
 
     @Test
-    void testGetAppointmentByProfessionalId_NotFound() throws Exception {
-        when(appointmentService.getAppointmentByProfessionalId(99L)).thenReturn(null);
+    void testGetAppointmentsByProfessionalId_NoAppointments_ReturnsEmptyList() throws Exception {
+        when(appointmentService.getAppointmentsByProfessionalId(99L)).thenReturn(List.of());
 
         mockMvc.perform(get("/api/appointments/professional/99"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
     }
 
     @Test
@@ -283,5 +287,62 @@ class AppointmentControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1L))
                 .andExpect(jsonPath("$[0].professionalId").value(20L));
+    }
+
+    @Test
+    void testSearchAppointments_OnlyDate() throws Exception {
+        AppointmentEntity entity = new AppointmentEntity();
+        entity.setId(2L);
+        entity.setAppointmentDate(LocalDate.of(2026, 9, 20));
+
+        when(appointmentService.findAppointments(org.mockito.ArgumentMatchers.isNull(), eq(LocalDate.of(2026, 9, 20))))
+                .thenReturn(List.of(entity));
+
+        mockMvc.perform(get("/api/appointments/search")
+                        .param("date", "2026-09-20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(2L));
+    }
+
+    @Test
+    void testGetMyAppointments_UsesAuthenticatedUser() throws Exception {
+        AppointmentEntity entity = new AppointmentEntity();
+        entity.setId(1L);
+        entity.setPatientId(10L);
+        when(appointmentService.getAppointmentsByUsername("ana", null, null)).thenReturn(List.of(entity));
+
+        var auth = new UsernamePasswordAuthenticationToken("ana", null,
+                List.of(new SimpleGrantedAuthority("ROLE_PATIENT")));
+
+        mockMvc.perform(get("/api/appointments/me").principal(auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].patientId").value(10L));
+        verify(appointmentService, never()).getAllAppointments();
+    }
+
+    @Test
+    void testCreateAppointment_AsPatient_IgnoresPatientIdFromBody() throws Exception {
+        AppointmentEntity created = new AppointmentEntity();
+        created.setId(1L);
+        created.setPatientId(10L);
+        created.setStatus("SCHEDULED");
+        when(appointmentService.getPatientIdByUsername("ana")).thenReturn(10L);
+        when(appointmentService.createAppointment(any(CreateAppointmentCommand.class))).thenReturn(created);
+
+        var auth = new UsernamePasswordAuthenticationToken("ana", null,
+                List.of(new SimpleGrantedAuthority("ROLE_PATIENT")));
+
+        // El cliente intenta agendar a nombre del paciente 99
+        String json = """
+                {"patientId": 99, "professionalId": 20, "appointmentDate": "2026-09-20",
+                 "startTime": "09:00:00", "endTime": "10:00:00"}
+                """;
+
+        mockMvc.perform(post("/api/appointments/create").principal(auth)
+                        .contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isOk());
+
+        verify(appointmentService).createAppointment(
+                argThat(cmd -> cmd.patientId().equals(10L)));
     }
 }
