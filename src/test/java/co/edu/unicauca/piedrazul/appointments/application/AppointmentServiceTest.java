@@ -135,23 +135,28 @@ class AppointmentServiceTest {
     }
 
     @Test
-    void testGetAppointmentByProfessionalId_Found() {
-        when(repository.findByProfessionalId(20L)).thenReturn(List.of(sampleEntity));
+    void testGetAppointmentByProfessionalId_ReturnsAllAppointments() {
+        AppointmentEntity other = new AppointmentEntity();
+        other.setId(2L);
+        other.setProfessionalId(20L);
 
-        AppointmentEntity result = service.getAppointmentByProfessionalId(20L);
+        when(repository.findByProfessionalId(20L)).thenReturn(List.of(sampleEntity, other));
 
-        assertNotNull(result);
-        assertEquals(20L, result.getProfessionalId());
+        List<AppointmentEntity> result = service.getAppointmentByProfessionalId(20L);
+
+        assertEquals(2, result.size());
+        assertEquals(20L, result.get(0).getProfessionalId());
+        assertEquals(20L, result.get(1).getProfessionalId());
         verify(repository).findByProfessionalId(20L);
     }
 
     @Test
-    void testGetAppointmentByProfessionalId_NotFound() {
+    void testGetAppointmentByProfessionalId_WithoutAppointments_ReturnsEmptyList() {
         when(repository.findByProfessionalId(99L)).thenReturn(Collections.emptyList());
 
-        AppointmentEntity result = service.getAppointmentByProfessionalId(99L);
+        List<AppointmentEntity> result = service.getAppointmentByProfessionalId(99L);
 
-        assertNull(result);
+        assertTrue(result.isEmpty());
         verify(repository).findByProfessionalId(99L);
     }
 

@@ -167,27 +167,38 @@ class AppointmentControllerTest {
     }
 
     @Test
-    void testGetAppointmentByProfessionalId_Found() throws Exception {
-        AppointmentEntity entity = new AppointmentEntity();
-        entity.setId(8L);
-        entity.setPatientId(12L);
-        entity.setProfessionalId(20L);
-        entity.setStatus("SCHEDULED");
+    void testGetAppointmentByProfessionalId_ReturnsAllAppointments() throws Exception {
+        AppointmentEntity first = new AppointmentEntity();
+        first.setId(8L);
+        first.setPatientId(12L);
+        first.setProfessionalId(20L);
+        first.setStatus("SCHEDULED");
 
-        when(appointmentService.getAppointmentByProfessionalId(20L)).thenReturn(entity);
+        AppointmentEntity second = new AppointmentEntity();
+        second.setId(9L);
+        second.setPatientId(13L);
+        second.setProfessionalId(20L);
+        second.setStatus("SCHEDULED");
+
+        when(appointmentService.getAppointmentByProfessionalId(20L))
+                .thenReturn(List.of(first, second));
 
         mockMvc.perform(get("/api/appointments/professional/20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(8L))
-                .andExpect(jsonPath("$.professionalId").value(20L));
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value(8L))
+                .andExpect(jsonPath("$[1].id").value(9L))
+                .andExpect(jsonPath("$[1].professionalId").value(20L));
     }
 
     @Test
-    void testGetAppointmentByProfessionalId_NotFound() throws Exception {
-        when(appointmentService.getAppointmentByProfessionalId(99L)).thenReturn(null);
+    void testGetAppointmentByProfessionalId_WithoutAppointments_ReturnsEmptyList() throws Exception {
+        when(appointmentService.getAppointmentByProfessionalId(99L))
+                .thenReturn(List.of());
 
         mockMvc.perform(get("/api/appointments/professional/99"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
     }
 
     @Test

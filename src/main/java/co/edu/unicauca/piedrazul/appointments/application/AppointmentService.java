@@ -51,8 +51,8 @@ public class AppointmentService {
         return repository.findById(id).orElse(null);
     }
 
-    public AppointmentEntity getAppointmentByProfessionalId(Long professionalId) {
-        return repository.findByProfessionalId(professionalId).stream().findFirst().orElse(null);
+    public List<AppointmentEntity> getAppointmentByProfessionalId(Long professionalId) {
+        return repository.findByProfessionalId(professionalId);
     }
 
     public List<AppointmentEntity> getAllAppointments() {
@@ -93,3 +93,4 @@ public class AppointmentService {
     return repository.findByPatientId(patientId);
     }
 }
+

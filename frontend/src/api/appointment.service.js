@@ -45,9 +45,9 @@ export const appointmentService = {
   },
 
   /**
-   * Obtiene la cita asociada a un profesional.
+   * Obtiene todas las citas de un profesional.
    * @param {number|string} professionalId - Identificador del profesional
-   * @returns {Promise<Object>}
+   * @returns {Promise<Array<Object>>}
    */
   async getByProfessionalId(professionalId) {
     const response = await apiClient.get(`/api/appointments/professional/${professionalId}`)
