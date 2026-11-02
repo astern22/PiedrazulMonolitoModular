@@ -62,6 +62,12 @@ public class GlobalExceptionHandler {
         return body(HttpStatus.INTERNAL_SERVER_ERROR, "Ocurrio un error inesperado en el servidor.");
     }
 
+
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<Map<String, String>> handleSecurity(SecurityException ex) {
+        return body(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
     private ResponseEntity<Map<String, String>> body(HttpStatus status, String message) {
         return ResponseEntity.status(status).body(Map.of("message", message));
     }

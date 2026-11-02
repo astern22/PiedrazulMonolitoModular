@@ -1,5 +1,6 @@
 package co.edu.unicauca.piedrazul.scheduling.application;
 
+import co.edu.unicauca.piedrazul.professionals.application.ProfessionalAccessGuard;
 import co.edu.unicauca.piedrazul.scheduling.infrastructure.persistence.WeeklyAvailabilityEntity;
 import co.edu.unicauca.piedrazul.scheduling.infrastructure.persistence.WeeklyAvailabilityRepository;
 import co.edu.unicauca.piedrazul.scheduling.presentation.dto.WeeklyAvailabilityRequest;
@@ -11,15 +12,21 @@ import java.util.List;
 public class WeeklyAvailabilityService {
 
     private final WeeklyAvailabilityRepository repository;
+    private final ProfessionalAccessGuard accessGuard;
 
     public WeeklyAvailabilityService(
-            WeeklyAvailabilityRepository repository) {
+            WeeklyAvailabilityRepository repository,
+            ProfessionalAccessGuard accessGuard) {
 
         this.repository = repository;
+        this.accessGuard = accessGuard;
     }
 
     public WeeklyAvailabilityEntity create(
             WeeklyAvailabilityRequest request) {
+
+        // Un profesional solo puede crear horarios para si mismo
+        accessGuard.assertOwnProfileIfProfessional(request.professionalId());
 
         if (!request.startTime().isBefore(request.endTime())) {
             throw new RuntimeException(
@@ -97,6 +104,9 @@ public class WeeklyAvailabilityService {
                                         "Disponibilidad no encontrada"
                                 )
                         );
+
+        // Un profesional solo puede desactivar sus propios horarios
+        accessGuard.assertOwnProfileIfProfessional(availability.getProfessionalId());
 
         availability.setActive(false);
 

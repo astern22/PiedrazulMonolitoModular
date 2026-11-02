@@ -1,5 +1,6 @@
 package co.edu.unicauca.piedrazul.professionals.presentation;
 
+import co.edu.unicauca.piedrazul.professionals.application.ProfessionalAccessGuard;
 import co.edu.unicauca.piedrazul.professionals.application.ProfessionalService;
 import co.edu.unicauca.piedrazul.professionals.infrastructure.persistence.ProfessionalEntity;
 import co.edu.unicauca.piedrazul.professionals.presentation.dto.ProfessionalRequest;
@@ -31,6 +32,9 @@ class ProfessionalControllerTest {
 
     @Mock
     private ProfessionalService service;
+
+    @Mock
+    private ProfessionalAccessGuard accessGuard;
 
     @InjectMocks
     private ProfessionalController controller;

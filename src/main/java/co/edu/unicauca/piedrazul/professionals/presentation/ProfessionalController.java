@@ -1,5 +1,6 @@
 package co.edu.unicauca.piedrazul.professionals.presentation;
 
+import co.edu.unicauca.piedrazul.professionals.application.ProfessionalAccessGuard;
 import co.edu.unicauca.piedrazul.professionals.application.ProfessionalService;
 import co.edu.unicauca.piedrazul.professionals.infrastructure.persistence.ProfessionalEntity;
 import co.edu.unicauca.piedrazul.professionals.presentation.dto.AppointmentIntervalRequest;
@@ -20,11 +21,14 @@ import java.util.Map;
 public class ProfessionalController {
 
     private final ProfessionalService service;
+    private final ProfessionalAccessGuard accessGuard;
 
     public ProfessionalController(
-            ProfessionalService service) {
+            ProfessionalService service,
+            ProfessionalAccessGuard accessGuard) {
 
         this.service = service;
+        this.accessGuard = accessGuard;
     }
 
     @PostMapping
@@ -58,6 +62,12 @@ public class ProfessionalController {
         return ResponseEntity.ok(toResponses(service.findActive()));
     }
 
+    /** Devuelve el profesional asociado al usuario autenticado. */
+    @GetMapping("/me")
+    public ResponseEntity<ProfessionalResponse> getMe() {
+        return ResponseEntity.ok(toResponse(accessGuard.currentProfessional()));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ProfessionalResponse> findById(@PathVariable Long id) {
         ProfessionalEntity professional =
@@ -77,6 +87,9 @@ public class ProfessionalController {
     public ResponseEntity<ProfessionalResponse> updateAppointmentInterval(
             @PathVariable Long id,
             @Valid @RequestBody AppointmentIntervalRequest request) {
+
+        // Un profesional solo puede cambiar su propia duracion de cita
+        accessGuard.assertOwnProfileIfProfessional(id);
 
         ProfessionalEntity professional =
                 service.updateAppointmentInterval(

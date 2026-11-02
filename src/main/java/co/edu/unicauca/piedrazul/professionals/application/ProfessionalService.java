@@ -185,10 +185,14 @@ public class ProfessionalService {
     public ProfessionalEntity findById(Long id) {
         return repository.findById(id)
                 .orElseThrow(() ->
+                        new RuntimeException("Profesional no encontrado"));
+    }
+
+    public ProfessionalEntity findByUserId(Long userId) {
+        return repository.findByUserId(userId)
+                .orElseThrow(() ->
                         new RuntimeException(
-                                "Profesional no encontrado"
-                        )
-                );
+                                "No se encontró un profesional asociado a tu cuenta"));
     }
 
     public List<ProfessionalEntity> findBySpecialty(

@@ -1,5 +1,6 @@
 package co.edu.unicauca.piedrazul.scheduling.application;
 
+import co.edu.unicauca.piedrazul.professionals.application.ProfessionalAccessGuard;
 import co.edu.unicauca.piedrazul.scheduling.infrastructure.persistence.WeeklyAvailabilityEntity;
 import co.edu.unicauca.piedrazul.scheduling.infrastructure.persistence.WeeklyAvailabilityRepository;
 import co.edu.unicauca.piedrazul.scheduling.presentation.dto.WeeklyAvailabilityRequest;
@@ -23,6 +24,9 @@ class WeeklyAvailabilityServiceTest {
 
     @Mock
     private WeeklyAvailabilityRepository repository;
+
+    @Mock
+    private ProfessionalAccessGuard accessGuard;
 
     @InjectMocks
     private WeeklyAvailabilityService service;
