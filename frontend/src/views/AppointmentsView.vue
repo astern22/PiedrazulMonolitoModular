@@ -16,6 +16,8 @@ const appointments = ref([]);
 // Todos los profesionales (para mostrar el nombre en la tabla) y los activos (para elegir)
 const allProfessionals = ref([]);
 const myProfessionalId = ref(null);
+// Fecha usada en la ultima busqueda; da nombre al archivo CSV exportado
+const appliedDate = ref("");
 const professionals = computed(() =>
   allProfessionals.value.filter((prof) => prof.active !== false),
 );
@@ -162,6 +164,13 @@ function recalculateEndTime() {
   }
 }
 
+// Fecha local de hoy en formato AAAA-MM-DD (toISOString usaria la hora UTC)
+function localDateString() {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
 // Ordena las citas por fecha y hora de inicio
 function sortByDateTime(list) {
   return [...list].sort((a, b) =>
@@ -183,13 +192,17 @@ async function loadProfessionals() {
     }
   } catch (error) {
     console.error("Error al cargar lista de profesionales:", error);
+    errorMessage.value =
+      error.message || "No se pudo cargar la informacion del profesional.";
   }
 }
 
 async function fetchAppointments() {
   isLoading.value = true;
+  const profileError = errorMessage.value;
   errorMessage.value = "";
   isFiltered.value = false;
+  appliedDate.value = "";
   try {
     if (isPatient.value) {
       // El paciente solo ve sus propias citas
@@ -206,9 +219,12 @@ async function fetchAppointments() {
             date: filter.value.date,
           }),
         );
+        appliedDate.value = filter.value.date || "";
         isFiltered.value = true;
       } else {
         appointments.value = [];
+        errorMessage.value =
+          profileError || "No se pudo identificar al profesional de esta cuenta.";
       }
     } else {
       // SCHEDULER y ADMIN ven todas las citas
@@ -285,6 +301,7 @@ async function handleSearch() {
         date: filter.value.date,
       }),
     );
+    appliedDate.value = filter.value.date || "";
   } catch (error) {
     errorMessage.value =
       error.message || "Error al buscar citas con los criterios indicados.";
@@ -353,7 +370,8 @@ function exportToCSV() {
 
   const link = document.createElement("a");
   link.href = url;
-  const dateStr = new Date().toISOString().split("T")[0];
+  // Si la busqueda tuvo fecha, el nombre usa esa fecha; si no, la de hoy
+  const dateStr = appliedDate.value || localDateString();
   link.setAttribute("download", `citas_medicas_${dateStr}.csv`);
 
   document.body.appendChild(link);
