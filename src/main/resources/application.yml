@@ -1,0 +1,39 @@
+
+spring:
+  application:
+    name: piedrazul
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/piedrazuldb?currentSchema=piedrazul
+    username: ${DB_USERNAME:piedrazul_admin}
+    password: ${DB_PASSWORD:Piedrazul123.}
+
+  jpa:
+    properties:
+      hibernate:
+        default_schema: piedrazul
+        format_sql: true
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    open-in-view: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8081/realms/piedrazul}
+
+server:
+  port: 8080
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+
+keycloak:
+  server-url: http://localhost:8081
+  realm: piedrazul
+  admin:
+    client-id: piedrazul-backend
+    client-secret: Atxs0AdIYWZXTdd0QWwby7cFI7NHCN5n

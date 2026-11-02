@@ -1,14 +1,14 @@
+
 package co.edu.unicauca.piedrazul.users.application;
 
 import java.util.Optional;
 
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import co.edu.unicauca.piedrazul.patients.infrastructure.persistence.PatientEntity;
 import co.edu.unicauca.piedrazul.patients.infrastructure.persistence.PatientRepository;
-import co.edu.unicauca.piedrazul.users.infrastructure.persistence.RoleEntity;
-import co.edu.unicauca.piedrazul.users.infrastructure.persistence.RoleRepository;
+import co.edu.unicauca.piedrazul.security.infrastructure.KeycloakAdminClient;
 import co.edu.unicauca.piedrazul.users.infrastructure.persistence.UserEntity;
 import co.edu.unicauca.piedrazul.users.infrastructure.persistence.UserRepository;
 import co.edu.unicauca.piedrazul.users.presentation.dto.RegisterRequest;
@@ -17,59 +17,97 @@ import co.edu.unicauca.piedrazul.users.presentation.dto.RegisterRequest;
 public class RegisterUserService {
 
     private final UserRepository repository;
-    private final RoleRepository roleRepository;
     private final PatientRepository patientRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final KeycloakAdminClient keycloakAdminClient;
 
     public RegisterUserService(
             UserRepository repository,
-            RoleRepository roleRepository,
             PatientRepository patientRepository,
-            PasswordEncoder passwordEncoder) {
+            KeycloakAdminClient keycloakAdminClient) {
 
         this.repository = repository;
-        this.roleRepository = roleRepository;
         this.patientRepository = patientRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.keycloakAdminClient = keycloakAdminClient;
     }
 
+    @Transactional
     public UserEntity register(RegisterRequest request) {
 
+        String username = request.username().trim();
+        String email = request.email().trim().toLowerCase();
+        String fullName = request.fullName().trim();
         String documentNumber = request.documentNumber().trim();
 
         Optional<PatientEntity> existingPatient =
                 patientRepository.findByDocumentNumber(documentNumber);
 
-        if (existingPatient.isPresent() && existingPatient.get().getUserId() != null) {
-            throw new RuntimeException("Ya existe una cuenta asociada a este numero de documento");
+        if (existingPatient.isPresent()
+                && existingPatient.get().getUserId() != null) {
+            throw new IllegalArgumentException(
+                    "Ya existe una cuenta asociada a este número de documento");
         }
 
-        UserEntity user = new UserEntity();
-        user.setUsername(request.username());
-        user.setFullName(request.fullName());
-        user.setEmail(request.email());
-        user.setPassword(passwordEncoder.encode(request.password()));
-        user.setEnabled(true);
-
-        RoleEntity patientRole = roleRepository
-                .findByName("PATIENT")
-                .orElseThrow(() -> new RuntimeException("Rol PATIENT no encontrado"));
-
-        user.getRoles().add(patientRole);
-
-        UserEntity savedUser = repository.save(user);
-
-        if (existingPatient.isPresent()) {
-            PatientEntity patient = existingPatient.get();
-            patient.setUserId(savedUser.getId());
-            patientRepository.save(patient);
-        } else {
-            PatientEntity newPatient = new PatientEntity();
-            newPatient.setDocumentNumber(documentNumber);
-            newPatient.setUserId(savedUser.getId());
-            patientRepository.save(newPatient);
+        if (repository.existsByUsername(username)) {
+            throw new IllegalArgumentException(
+                    "El nombre de usuario ya está registrado");
         }
 
-        return savedUser;
+        if (repository.existsByEmail(email)) {
+            throw new IllegalArgumentException(
+                    "El correo electrónico ya está registrado");
+        }
+
+        String keycloakUserId = keycloakAdminClient.createUser(
+                username,
+                email,
+                fullName,
+                request.password()
+        );
+
+        try {
+
+            keycloakAdminClient.assignRealmRole(
+                    keycloakUserId,
+                    "PATIENT"
+            );
+
+            UserEntity user = new UserEntity();
+            user.setUsername(username);
+            user.setFullName(fullName);
+            user.setEmail(email);
+            user.setEnabled(true);
+            user.setKeycloakUserId(keycloakUserId);
+
+            user.setPassword(null);
+
+            UserEntity savedUser = repository.save(user);
+
+            if (existingPatient.isPresent()) {
+
+                PatientEntity patient = existingPatient.get();
+                patient.setUserId(savedUser.getId());
+                patientRepository.save(patient);
+
+            } else {
+
+                PatientEntity newPatient = new PatientEntity();
+                newPatient.setDocumentNumber(documentNumber);
+                newPatient.setUserId(savedUser.getId());
+
+                patientRepository.save(newPatient);
+            }
+
+            return savedUser;
+
+        } catch (RuntimeException exception) {
+
+            try {
+                keycloakAdminClient.deleteUser(keycloakUserId);
+            } catch (RuntimeException deleteException) {
+                exception.addSuppressed(deleteException);
+            }
+
+            throw exception;
+        }
     }
 }
