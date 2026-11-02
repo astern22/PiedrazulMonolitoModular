@@ -21,6 +21,7 @@ const professionals = computed(() =>
 const fieldErrors = ref({});
 const isLoading = ref(false);
 const isSubmitting = ref(false);
+const isExporting = ref(false);
 const errorMessage = ref("");
 const successMessage = ref("");
 const showCreateForm = ref(false);
@@ -266,35 +267,8 @@ function handleClearSearch() {
   fetchAppointments();
 }
 
-function exportToCSV() {
-  if (!appointments.value || appointments.value.length === 0) {
-    errorMessage.value = "No hay datos para exportar.";
-    return;
-  }
-
-  const columns = [
-    { key: "id", label: "ID" },
-    { key: "patientId", label: "ID Paciente" },
-    { key: "professionalName", label: "Profesional" },
-    { key: "appointmentDate", label: "Fecha" },
-    { key: "startTime", label: "Hora Inicio" },
-    { key: "endTime", label: "Hora Fin" },
-    { key: "status", label: "Estado" },
-  ];
-
-  const dataToExport = appointments.value.map((item) => ({
-    id: item.id,
-    patientId: item.patientId,
-    professionalName: professionalNameById(
-      allProfessionals.value,
-      item.professionalId,
-    ),
-    appointmentDate: item.appointmentDate,
-    startTime: item.startTime,
-    endTime: item.endTime,
-    status: item.status,
-  }));
-
+async function exportToCSV() {
+  isExporting.value = true;
   const escapeCSV = (value) => {
     if (value === null || value === undefined) return "";
     const str = String(value);
@@ -304,29 +278,94 @@ function exportToCSV() {
     return str;
   };
 
-  const headers = columns.map((col) => escapeCSV(col.label)).join(",");
-  const rows = dataToExport.map((item) =>
-    columns.map((col) => escapeCSV(item[col.key])).join(","),
-  );
+  errorMessage.value = "";
+  try {
+    if (!appointments.value || appointments.value.length === 0) {
+      errorMessage.value = "No hay datos para exportar.";
+      return;
+    }
 
-  const csvContent = [headers, ...rows].join("\r\n");
+    const patientIds = [
+      ...new Set(appointments.value.map((item) => item.patientId)),
+    ];
+    const patientResults = await Promise.allSettled(
+      patientIds.map((id) => patientService.getById(id)),
+    );
+    const patientsById = new Map();
+    patientResults.forEach((result, index) => {
+      if (result.status === "fulfilled" && result.value) {
+        patientsById.set(patientIds[index], {
+          fullName: result.value.fullName,
+          documentNumber: result.value.documentNumber,
+        });
+      }
+    });
 
-  const BOM = "\uFEFF";
-  const blob = new Blob([BOM + csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
-  const url = URL.createObjectURL(blob);
+    const columns = [
+      { key: "id", label: "ID" },
+      { key: "patientName", label: "Paciente" },
+      { key: "documentNumber", label: "Documento" },
+      { key: "professionalName", label: "Profesional" },
+      { key: "appointmentDate", label: "Fecha" },
+      { key: "startTime", label: "Hora Inicio" },
+      { key: "endTime", label: "Hora Fin" },
+      { key: "status", label: "Estado" },
+    ];
 
-  const link = document.createElement("a");
-  link.href = url;
-  const dateStr = new Date().toISOString().split("T")[0];
-  link.setAttribute("download", `citas_medicas_${dateStr}.csv`);
+    const dataToExport = appointments.value.map((item) => {
+      const patient = patientsById.get(item.patientId);
+      return {
+        id: item.id,
+        patientName: patient?.fullName || `Paciente #${item.patientId}`,
+        documentNumber: patient?.documentNumber || "",
+        professionalName: professionalNameById(
+          allProfessionals.value,
+          item.professionalId,
+        ),
+        appointmentDate: item.appointmentDate,
+        startTime: item.startTime,
+        endTime: item.endTime,
+        status: item.status,
+      };
+    });
 
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+    const headers = columns.map((col) => escapeCSV(col.label)).join(",");
+    const rows = dataToExport.map((item) =>
+      columns
+        .map((col) => {
+          const value = item[col.key];
+          if (col.key === "documentNumber" && value) {
+            const formulaText = String(value).replace(/"/g, '""');
+            return escapeCSV(`="${formulaText}"`);
+          }
+          return escapeCSV(value);
+        })
+        .join(","),
+    );
 
-  URL.revokeObjectURL(url);
+    const csvContent = [headers, ...rows].join("\r\n");
+
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    const dateStr = new Date().toISOString().split("T")[0];
+    link.setAttribute("download", `citas_medicas_${dateStr}.csv`);
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    errorMessage.value = error.message || "No se pudo exportar las citas.";
+  } finally {
+    isExporting.value = false;
+  }
 }
 
 async function handleCreate() {
@@ -655,11 +694,11 @@ onMounted(async () => {
       <div class="table-header" style="display: flex; justify-content: space-between; align-items: baseline;">
         <h3>Citas Medicas ({{ appointments.length }})</h3>
         <button
-          v-if="appointments.length > 0 && isFiltered"
+          v-if="appointments.length > 0"
           @click="exportToCSV"
           type="button"
           class="btn btn-primary"
-          :disabled="isLoading"
+          :disabled="isLoading || isExporting"
         >
           Exportar a CSV
         </button>
