@@ -1,3 +1,4 @@
+import axios from 'axios'
 import apiClient, {
   getToken,
   setToken,
@@ -19,12 +20,42 @@ export const authService = {
    * @returns {Promise<{token: string}>}
    */
   async login({ username, password }) {
-    const response = await apiClient.post('/auth/login', { username, password })
-    if (response.data && response.data.token) {
-      setToken(response.data.token)
+  const params = new URLSearchParams()
+
+  params.append('grant_type', 'password')
+  params.append('client_id', 'piedrazul-api')
+  params.append('username', username)
+  params.append('password', password)
+
+  try {
+    const response = await axios.post(
+      'http://localhost:8081/realms/piedrazul/protocol/openid-connect/token',
+      params,
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      }
+    )
+
+    const accessToken = response.data.access_token
+
+    if (!accessToken) {
+      throw new Error('Keycloak no devolvió un token')
     }
-    return response.data
-  },
+
+    setToken(accessToken)
+
+    return {
+      token: accessToken,
+      refreshToken: response.data.refresh_token,
+      expiresIn: response.data.expires_in,
+    }
+  } catch (error) {
+    console.error('Error iniciando sesión:', error.response?.data || error)
+    throw error
+  }
+},
 
   /**
    * Registra un nuevo usuario en la plataforma.
@@ -79,8 +110,8 @@ export const authService = {
     const decoded = decodeToken()
     if (!decoded) return null
     return {
-      username: decoded.sub,
-      roles: Array.isArray(decoded.roles) ? decoded.roles : [],
+      username: decoded.preferred_username || decoded.sub,
+      roles: decoded.realm_access?.roles || [],
       exp: decoded.exp,
       iat: decoded.iat,
     }

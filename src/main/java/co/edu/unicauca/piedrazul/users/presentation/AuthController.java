@@ -16,12 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
-    private final RegisterUserService registerUserService;
-    private final LoginService loginService;
 
-    public AuthController(RegisterUserService registerUserService, LoginService loginService) {
+    private final RegisterUserService registerUserService;
+
+    public AuthController(RegisterUserService registerUserService) {
         this.registerUserService = registerUserService;
-        this.loginService = loginService;
     }
 
     @PostMapping("/register")
@@ -33,18 +32,5 @@ public class AuthController {
         return ResponseEntity.ok(
                 new RegisterResponse(user.getUsername())
         );
-    }
-
-    @PostMapping("/login")
-    public LoginResponse login(
-            @RequestBody LoginRequest request) {
-
-        String token =
-                loginService.login(
-                        request.username(),
-                        request.password()
-                );
-
-        return new LoginResponse(token);
     }
 }

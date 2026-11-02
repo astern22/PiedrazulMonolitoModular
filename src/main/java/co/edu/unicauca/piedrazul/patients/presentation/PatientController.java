@@ -2,6 +2,7 @@ package co.edu.unicauca.piedrazul.patients.presentation;
 
 import java.util.List;
 
+import co.edu.unicauca.piedrazul.patients.infrastructure.persistence.PatientEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -34,9 +35,12 @@ public class PatientController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<PatientResponse> findByCurrentUser(Authentication authentication) {
-        String username = (String) authentication.getPrincipal();
-        return ResponseEntity.ok(patientService.findByCurrentUser(username));
+    public ResponseEntity<PatientResponse> findByCurrentUser() {
+        PatientEntity patient = patientService.getMyPatient();
+
+        PatientResponse response = patientService.findById(patient.getId());
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")

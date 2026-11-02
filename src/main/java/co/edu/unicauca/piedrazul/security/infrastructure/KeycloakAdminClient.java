@@ -57,6 +57,7 @@ public class KeycloakAdminClient {
     }
 
     // 2. Crear un usuario en Keycloak
+    // 2. Crear un usuario en Keycloak
     public String createUser(
             String username,
             String email,
@@ -65,14 +66,26 @@ public class KeycloakAdminClient {
 
         String token = obtainAdminToken();
 
-        String[] nameParts = fullName.trim().split("\\s+", 2);
+        // Normalizar espacios del nombre completo
+        String normalizedName = fullName.trim().replaceAll("\\s+", " ");
+
+        // Separar nombres y apellidos
+        String[] nameParts = normalizedName.split(" ", 2);
+
+        String firstName = nameParts[0];
+
+        // Si no hay apellido, utilizar temporalmente el nombre
+        // para evitar enviar un lastName vacío.
+        String lastName = nameParts.length > 1
+                ? nameParts[1]
+                : nameParts[0];
 
         Map<String, Object> user = Map.of(
                 "username", username,
                 "email", email,
                 "enabled", true,
-                "firstName", nameParts[0],
-                "lastName", nameParts.length > 1 ? nameParts[1] : "",
+                "firstName", firstName,
+                "lastName", lastName,
                 "credentials", List.of(
                         Map.of(
                                 "type", "password",

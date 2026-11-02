@@ -38,15 +38,11 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        // Registro local temporalmente público.
-                        // Lo adaptaremos para que cree cuentas en Keycloak.
-                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/register").permitAll()
 
-                        // Administración de usuarios.
                         .requestMatchers("/api/users/**")
                         .hasRole("ADMIN")
 
-                        // Historial por documento: solo personal autorizado.
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/appointments/patient/document/*/history"
@@ -54,7 +50,6 @@ public class SecurityConfig {
                                 "PROFESSIONAL", "SCHEDULER", "ADMIN"
                         )
 
-                        // Consultas generales de citas.
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/appointments/search",
@@ -64,7 +59,6 @@ public class SecurityConfig {
                                 "PROFESSIONAL", "SCHEDULER", "ADMIN"
                         )
 
-                        // Consultas de citas por paciente.
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/appointments/patient/**"
@@ -72,7 +66,6 @@ public class SecurityConfig {
                                 "PATIENT", "PROFESSIONAL", "SCHEDULER", "ADMIN"
                         )
 
-                        // Crear citas.
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/appointments/**"
@@ -80,7 +73,6 @@ public class SecurityConfig {
                                 "PATIENT", "PROFESSIONAL", "SCHEDULER", "ADMIN"
                         )
 
-                        // Modificar citas.
                         .requestMatchers(
                                 HttpMethod.PUT,
                                 "/api/appointments/**"
@@ -88,7 +80,6 @@ public class SecurityConfig {
                                 "PROFESSIONAL", "SCHEDULER", "ADMIN"
                         )
 
-                        // Eliminar citas.
                         .requestMatchers(
                                 HttpMethod.DELETE,
                                 "/api/appointments/**"
@@ -122,7 +113,6 @@ public class SecurityConfig {
             List<GrantedAuthority> authorities =
                     new ArrayList<>();
 
-            // Conservar conversión de scopes estándar.
             JwtGrantedAuthoritiesConverter scopesConverter =
                     new JwtGrantedAuthoritiesConverter();
 

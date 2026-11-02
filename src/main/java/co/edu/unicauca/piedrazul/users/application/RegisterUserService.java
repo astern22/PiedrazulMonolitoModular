@@ -3,6 +3,7 @@ package co.edu.unicauca.piedrazul.users.application;
 
 import java.util.Optional;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +13,8 @@ import co.edu.unicauca.piedrazul.security.infrastructure.KeycloakAdminClient;
 import co.edu.unicauca.piedrazul.users.infrastructure.persistence.UserEntity;
 import co.edu.unicauca.piedrazul.users.infrastructure.persistence.UserRepository;
 import co.edu.unicauca.piedrazul.users.presentation.dto.RegisterRequest;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class RegisterUserService {
@@ -57,12 +60,18 @@ public class RegisterUserService {
                     "El correo electrónico ya está registrado");
         }
 
-        String keycloakUserId = keycloakAdminClient.createUser(
-                username,
-                email,
-                fullName,
-                request.password()
-        );
+        String keycloakUserId;
+
+        try {
+            keycloakUserId = keycloakAdminClient.createUser(
+                    username, email, fullName, request.password()
+            );
+        } catch (WebClientResponseException.Conflict exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "El usuario o correo electrónico ya está registrado en Keycloak."
+            );
+        }
 
         try {
 

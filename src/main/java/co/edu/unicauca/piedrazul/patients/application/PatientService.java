@@ -3,6 +3,7 @@ package co.edu.unicauca.piedrazul.patients.application;
 import java.util.List;
 import java.util.Optional;
 
+import co.edu.unicauca.piedrazul.security.AuthenticatedUserService;
 import org.springframework.stereotype.Service;
 
 import co.edu.unicauca.piedrazul.patients.infrastructure.persistence.PatientEntity;
@@ -17,10 +18,16 @@ public class PatientService {
 
     private final PatientRepository patientRepository;
     private final UserRepository userRepository;
+    private final AuthenticatedUserService authenticatedUserService;
 
-    public PatientService(PatientRepository patientRepository, UserRepository userRepository) {
+    public PatientService(
+            PatientRepository patientRepository,
+            UserRepository userRepository,
+            AuthenticatedUserService authenticatedUserService) {
+
         this.patientRepository = patientRepository;
         this.userRepository = userRepository;
+        this.authenticatedUserService = authenticatedUserService;
     }
 
     public PatientResponse create(PatientRequest request) {
@@ -123,6 +130,24 @@ public class PatientService {
             }
         }
         return PatientResponse.fromEntity(entity, fullName, email);
+    }
+
+    public PatientEntity getMyPatient() {
+
+        String keycloakUserId =
+                authenticatedUserService.getKeycloakUserId();
+
+        UserEntity user = userRepository
+                .findByKeycloakUserId(keycloakUserId)
+                .orElseThrow(() ->
+                        new RuntimeException("Usuario no encontrado"));
+
+        PatientEntity patient = patientRepository
+                .findByUserId(user.getId())
+                .orElseThrow(() ->
+                        new RuntimeException("Paciente no encontrado"));
+
+        return patient;
     }
 }
 
