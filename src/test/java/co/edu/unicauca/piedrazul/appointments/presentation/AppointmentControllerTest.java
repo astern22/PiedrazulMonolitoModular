@@ -19,6 +19,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -283,5 +284,35 @@ class AppointmentControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1L))
                 .andExpect(jsonPath("$[0].professionalId").value(20L));
+    }
+
+    @Test
+    void testSearchAppointments_OnlyProfessional() throws Exception {
+        AppointmentEntity entity = new AppointmentEntity();
+        entity.setId(2L);
+        entity.setProfessionalId(20L);
+
+        when(appointmentService.findAppointments(eq(20L), isNull()))
+                .thenReturn(List.of(entity));
+
+        mockMvc.perform(get("/api/appointments/search")
+                        .param("professionalId", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(2L));
+    }
+
+    @Test
+    void testSearchAppointments_OnlyDate() throws Exception {
+        AppointmentEntity entity = new AppointmentEntity();
+        entity.setId(3L);
+        entity.setAppointmentDate(LocalDate.of(2026, 9, 20));
+
+        when(appointmentService.findAppointments(isNull(), eq(LocalDate.of(2026, 9, 20))))
+                .thenReturn(List.of(entity));
+
+        mockMvc.perform(get("/api/appointments/search")
+                        .param("date", "2026-09-20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(3L));
     }
 }

@@ -200,4 +200,31 @@ class AppointmentServiceTest {
         assertEquals(1, results.size());
         verify(repository).findByProfessionalIdAndAppointmentDate(20L, date);
     }
+
+    @Test
+    void testFindAppointments_OnlyProfessional() {
+        when(repository.findByProfessionalId(20L)).thenReturn(List.of(sampleEntity));
+
+        List<AppointmentEntity> results = service.findAppointments(20L, null);
+
+        assertEquals(1, results.size());
+        verify(repository).findByProfessionalId(20L);
+    }
+
+    @Test
+    void testFindAppointments_OnlyDate() {
+        LocalDate date = LocalDate.of(2026, 10, 15);
+        when(repository.findAllByAppointmentDate(date)).thenReturn(List.of(sampleEntity));
+
+        List<AppointmentEntity> results = service.findAppointments(null, date);
+
+        assertEquals(1, results.size());
+        verify(repository).findAllByAppointmentDate(date);
+    }
+
+    @Test
+    void testFindAppointments_WithoutCriteria_ThrowsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> service.findAppointments(null, null));
+    }
 }

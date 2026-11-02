@@ -109,8 +109,8 @@ public class AppointmentController {
 
     @GetMapping("/search")
     public List<AppointmentEntity> search(
-            @RequestParam Long professionalId,
-            @RequestParam LocalDate date) {
+            @RequestParam(required = false) Long professionalId,
+            @RequestParam(required = false) LocalDate date) {
 
         return service.findAppointments(
                 professionalId,
@@ -118,4 +118,3 @@ public class AppointmentController {
         );
     }
 }
-

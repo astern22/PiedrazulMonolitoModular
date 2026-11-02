@@ -67,7 +67,21 @@ public class AppointmentService {
         repository.deleteById(id);
     }
 
+    /**
+     * Busca citas por profesional, por fecha o por ambos.
+     * Debe llegar al menos uno de los dos criterios.
+     */
     public List<AppointmentEntity> findAppointments(Long professionalId, LocalDate date) {
+        if (professionalId == null && date == null) {
+            throw new IllegalArgumentException(
+                    "Indica al menos el profesional o la fecha para buscar");
+        }
+        if (professionalId == null) {
+            return repository.findAllByAppointmentDate(date);
+        }
+        if (date == null) {
+            return repository.findByProfessionalId(professionalId);
+        }
         return repository
                 .findByProfessionalIdAndAppointmentDate(
                         professionalId,
@@ -79,4 +93,3 @@ public class AppointmentService {
     return repository.findByPatientId(patientId);
     }
 }
-
