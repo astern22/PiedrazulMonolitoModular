@@ -68,6 +68,14 @@ public class PatientService {
         return toResponse(entity);
     }
 
+    public Optional<PatientResponse> findOptionalByDocumentNumber(String documentNumber) {
+        if (documentNumber == null || documentNumber.isBlank()) {
+            return Optional.empty();
+        }
+        return patientRepository.findByDocumentNumber(documentNumber.trim())
+                .map(this::toResponse);
+    }
+
     public PatientResponse findByDocumentNumber(String documentNumber) {
         PatientEntity entity = patientRepository.findByDocumentNumber(documentNumber)
                 .orElseThrow(() -> new RuntimeException("Paciente no encontrado con documento: " + documentNumber));

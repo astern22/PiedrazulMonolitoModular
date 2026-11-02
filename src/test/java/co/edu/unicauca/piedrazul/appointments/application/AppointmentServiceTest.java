@@ -5,6 +5,9 @@ import co.edu.unicauca.piedrazul.appointments.infrastructure.persistence.Appoint
 import co.edu.unicauca.piedrazul.appointments.presentation.command.CreateAppointmentCommand;
 import co.edu.unicauca.piedrazul.patients.application.PatientService;
 import co.edu.unicauca.piedrazul.patients.presentation.dto.PatientResponse;
+import co.edu.unicauca.piedrazul.appointments.presentation.dto.PatientAppointmentHistoryResponse;
+import co.edu.unicauca.piedrazul.professionals.application.ProfessionalService;
+import co.edu.unicauca.piedrazul.professionals.infrastructure.persistence.ProfessionalEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,12 +15,15 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,6 +37,9 @@ class AppointmentServiceTest {
 
     @Mock
     private PatientService patientService;
+
+    @Mock
+    private ProfessionalService professionalService;
 
     @InjectMocks
     private AppointmentService service;
@@ -328,5 +337,84 @@ class AppointmentServiceTest {
         when(patientService.findByCurrentUser("ana")).thenReturn(patient);
 
         assertEquals(10L, service.getPatientIdByUsername("ana"));
+    }
+
+    // ==========================================
+    // E4-HU3: Listar citas medicas por cedula
+    // ==========================================
+
+    @Test
+    void testCA1_GetAppointmentHistory_SuccessWithRecords() {
+        String doc = "1061789234";
+        PatientResponse patient = new PatientResponse(10L, 2L, doc, "3001234567", LocalDate.of(1995, 5, 20), "Carlos Gomez", "carlos@mail.com");
+        when(patientService.findOptionalByDocumentNumber(doc)).thenReturn(Optional.of(patient));
+
+        AppointmentEntity apt1 = new AppointmentEntity();
+        apt1.setId(101L);
+        apt1.setPatientId(10L);
+        apt1.setProfessionalId(20L);
+        apt1.setAppointmentDate(LocalDate.of(2026, 11, 10));
+        apt1.setStartTime(LocalTime.of(10, 0));
+        apt1.setEndTime(LocalTime.of(10, 30));
+        apt1.setStatus("ATENDIDA");
+
+        when(repository.findByPatientIdOrderByAppointmentDateDescStartTimeDesc(10L))
+                .thenReturn(List.of(apt1));
+
+        ProfessionalEntity prof = new ProfessionalEntity();
+        prof.setId(20L);
+        prof.setUserId(50L);
+        prof.setSpecialtyId(3L);
+        when(professionalService.findById(20L)).thenReturn(prof);
+        when(professionalService.findFullNamesByUserIds(Set.of(50L))).thenReturn(Map.of(50L, "Dr. Roberto Casas"));
+        when(professionalService.findSpecialtyNamesByIds(Set.of(3L))).thenReturn(Map.of(3L, "Medicina General"));
+
+        PatientAppointmentHistoryResponse response = service.getAppointmentHistoryByDocument(doc);
+
+        assertNotNull(response);
+        assertEquals(patient, response.patient());
+        assertEquals(1, response.appointments().size());
+        var item = response.appointments().getFirst();
+        assertEquals(101L, item.id());
+        assertEquals("Dr. Roberto Casas", item.professionalName());
+        assertEquals("Medicina General", item.specialtyName());
+        assertEquals("ATENDIDA", item.status());
+        assertEquals(LocalDate.of(2026, 11, 10), item.appointmentDate());
+        assertEquals(LocalTime.of(10, 0), item.startTime());
+    }
+
+    @Test
+    void testCA2_GetAppointmentHistory_PatientWithoutAppointments() {
+        String doc = "1061789234";
+        PatientResponse patient = new PatientResponse(10L, 2L, doc, "3001234567", LocalDate.of(1995, 5, 20), "Carlos Gomez", "carlos@mail.com");
+        when(patientService.findOptionalByDocumentNumber(doc)).thenReturn(Optional.of(patient));
+        when(repository.findByPatientIdOrderByAppointmentDateDescStartTimeDesc(10L))
+                .thenReturn(Collections.emptyList());
+
+        PatientAppointmentHistoryResponse response = service.getAppointmentHistoryByDocument(doc);
+
+        assertNotNull(response);
+        assertEquals(patient, response.patient());
+        assertTrue(response.appointments().isEmpty());
+    }
+
+    @Test
+    void testCA3_GetAppointmentHistory_PatientNotFound() {
+        String doc = "9999999999";
+        when(patientService.findOptionalByDocumentNumber(doc)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                service.getAppointmentHistoryByDocument(doc));
+        assertEquals(404, ex.getStatusCode().value());
+        assertTrue(ex.getReason().contains("No se encontró ningún paciente registrado con la cédula ingresada"));
+    }
+
+    @Test
+    void testCA4_GetAppointmentHistory_InvalidDocumentFormat() {
+        assertThrows(IllegalArgumentException.class, () -> service.getAppointmentHistoryByDocument(null));
+        assertThrows(IllegalArgumentException.class, () -> service.getAppointmentHistoryByDocument(""));
+        assertThrows(IllegalArgumentException.class, () -> service.getAppointmentHistoryByDocument("   "));
+        assertThrows(IllegalArgumentException.class, () -> service.getAppointmentHistoryByDocument("123ABC456"));
+        assertThrows(IllegalArgumentException.class, () -> service.getAppointmentHistoryByDocument("123-456"));
     }
 }

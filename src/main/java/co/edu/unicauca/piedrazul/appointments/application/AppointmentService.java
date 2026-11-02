@@ -3,24 +3,40 @@ package co.edu.unicauca.piedrazul.appointments.application;
 import co.edu.unicauca.piedrazul.appointments.infrastructure.persistence.AppointmentEntity;
 import co.edu.unicauca.piedrazul.appointments.infrastructure.persistence.AppointmentRepository;
 import co.edu.unicauca.piedrazul.appointments.presentation.command.CreateAppointmentCommand;
+import co.edu.unicauca.piedrazul.appointments.presentation.dto.AppointmentHistoryItemResponse;
+import co.edu.unicauca.piedrazul.appointments.presentation.dto.PatientAppointmentHistoryResponse;
 import co.edu.unicauca.piedrazul.patients.application.PatientService;
+import co.edu.unicauca.piedrazul.patients.presentation.dto.PatientResponse;
+import co.edu.unicauca.piedrazul.professionals.application.ProfessionalService;
+import co.edu.unicauca.piedrazul.professionals.infrastructure.persistence.ProfessionalEntity;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class AppointmentService {
 
     private final AppointmentRepository repository;
     private final PatientService patientService;
+    private final ProfessionalService professionalService;
 
-    public AppointmentService(AppointmentRepository repository, PatientService patientService) {
+    public AppointmentService(
+            AppointmentRepository repository,
+            PatientService patientService,
+            ProfessionalService professionalService) {
         this.repository = repository;
         this.patientService = patientService;
+        this.professionalService = professionalService;
     }
 
     public AppointmentEntity createAppointment(CreateAppointmentCommand command) {
@@ -154,5 +170,81 @@ public class AppointmentService {
                         .comparing(AppointmentEntity::getAppointmentDate)
                         .thenComparing(AppointmentEntity::getStartTime))
                 .toList();
+    }
+
+    /**
+     * Consulta el historial cronologico completo de citas de un paciente por su cedula.
+     * Roles permitidos: ADMIN, SCHEDULER, PROFESSIONAL (Medico/Terapista).
+     */
+    public PatientAppointmentHistoryResponse getAppointmentHistoryByDocument(String documentNumber) {
+        if (documentNumber == null || documentNumber.isBlank() || !documentNumber.trim().matches("^\\d+$")) {
+            throw new IllegalArgumentException("El campo es obligatorio y solo acepta caracteres numéricos válidos.");
+        }
+
+        PatientResponse patient = patientService.findOptionalByDocumentNumber(documentNumber.trim())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "No se encontró ningún paciente registrado con la cédula ingresada"
+                ));
+
+        List<AppointmentEntity> appointments = repository
+                .findByPatientIdOrderByAppointmentDateDescStartTimeDesc(patient.id());
+
+        if (appointments.isEmpty()) {
+            return new PatientAppointmentHistoryResponse(patient, Collections.emptyList());
+        }
+
+        Set<Long> professionalIds = appointments.stream()
+                .map(AppointmentEntity::getProfessionalId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Long, ProfessionalEntity> profMap = new HashMap<>();
+        for (Long profId : professionalIds) {
+            try {
+                profMap.put(profId, professionalService.findById(profId));
+            } catch (Exception ignored) {
+            }
+        }
+
+        Set<Long> userIds = profMap.values().stream()
+                .map(ProfessionalEntity::getUserId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Set<Long> specialtyIds = profMap.values().stream()
+                .map(ProfessionalEntity::getSpecialtyId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Long, String> fullNames = professionalService.findFullNamesByUserIds(userIds);
+        Map<Long, String> specialtyNames = professionalService.findSpecialtyNamesByIds(specialtyIds);
+
+        List<AppointmentHistoryItemResponse> items = appointments.stream().map(a -> {
+            ProfessionalEntity prof = profMap.get(a.getProfessionalId());
+            String profName = "Profesional #" + a.getProfessionalId();
+            String specName = "General";
+            if (prof != null) {
+                if (prof.getUserId() != null && fullNames.containsKey(prof.getUserId())) {
+                    profName = fullNames.get(prof.getUserId());
+                }
+                if (prof.getSpecialtyId() != null && specialtyNames.containsKey(prof.getSpecialtyId())) {
+                    specName = specialtyNames.get(prof.getSpecialtyId());
+                }
+            }
+            return new AppointmentHistoryItemResponse(
+                    a.getId(),
+                    a.getPatientId(),
+                    a.getProfessionalId(),
+                    a.getAppointmentDate(),
+                    a.getStartTime(),
+                    a.getEndTime(),
+                    profName,
+                    specName,
+                    a.getStatus()
+            );
+        }).toList();
+
+        return new PatientAppointmentHistoryResponse(patient, items);
     }
 }

@@ -107,6 +107,16 @@ export const appointmentService = {
   async getByPatientId(patientId) {
     const response = await apiClient.get(`/api/appointments/patient/${patientId}`)
     return response.data
+  },
+
+  /**
+   * Obtiene el historial cronológico completo de citas de un paciente a partir de su cédula.
+   * @param {string} documentNumber - Cédula del paciente
+   * @returns {Promise<{patient: Object, appointments: Array}>}
+   */
+  async getHistoryByDocument(documentNumber) {
+    const response = await apiClient.get(`/api/appointments/patient/document/${encodeURIComponent(documentNumber)}/history`)
+    return response.data
   }
 }
 

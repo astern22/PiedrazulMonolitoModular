@@ -3,20 +3,27 @@ package co.edu.unicauca.piedrazul.appointments.presentation;
 import co.edu.unicauca.piedrazul.appointments.application.AppointmentService;
 import co.edu.unicauca.piedrazul.appointments.infrastructure.persistence.AppointmentEntity;
 import co.edu.unicauca.piedrazul.appointments.presentation.command.CreateAppointmentCommand;
+import co.edu.unicauca.piedrazul.appointments.presentation.dto.AppointmentHistoryItemResponse;
+import co.edu.unicauca.piedrazul.appointments.presentation.dto.PatientAppointmentHistoryResponse;
+import co.edu.unicauca.piedrazul.common.GlobalExceptionHandler;
+import co.edu.unicauca.piedrazul.patients.presentation.dto.PatientResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -39,7 +46,9 @@ class AppointmentControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(appointmentController).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(appointmentController)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
     }
 
     @Test
@@ -344,5 +353,68 @@ class AppointmentControllerTest {
 
         verify(appointmentService).createAppointment(
                 argThat(cmd -> cmd.patientId().equals(10L)));
+    }
+
+    // ==========================================
+    // E4-HU3: Listar citas medicas por cedula
+    // ==========================================
+
+    @Test
+    void testCA1_GetAppointmentHistoryByDocument_Success() throws Exception {
+        String doc = "1061789234";
+        PatientResponse patient = new PatientResponse(10L, 2L, doc, "3001234567", LocalDate.of(1995, 5, 20), "Carlos Gomez", "carlos@mail.com");
+        AppointmentHistoryItemResponse item = new AppointmentHistoryItemResponse(
+                101L, 10L, 20L, LocalDate.of(2026, 11, 10),
+                LocalTime.of(10, 0), LocalTime.of(10, 30),
+                "Dr. Roberto Casas", "Medicina General", "ATENDIDA"
+        );
+        PatientAppointmentHistoryResponse response = new PatientAppointmentHistoryResponse(patient, List.of(item));
+
+        when(appointmentService.getAppointmentHistoryByDocument(doc)).thenReturn(response);
+
+        mockMvc.perform(get("/api/appointments/patient/document/{documentNumber}/history", doc))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.patient.documentNumber").value(doc))
+                .andExpect(jsonPath("$.patient.fullName").value("Carlos Gomez"))
+                .andExpect(jsonPath("$.appointments[0].id").value(101))
+                .andExpect(jsonPath("$.appointments[0].professionalName").value("Dr. Roberto Casas"))
+                .andExpect(jsonPath("$.appointments[0].specialtyName").value("Medicina General"))
+                .andExpect(jsonPath("$.appointments[0].status").value("ATENDIDA"));
+    }
+
+    @Test
+    void testCA2_GetAppointmentHistoryByDocument_EmptyList() throws Exception {
+        String doc = "1061789234";
+        PatientResponse patient = new PatientResponse(10L, 2L, doc, "3001234567", LocalDate.of(1995, 5, 20), "Carlos Gomez", "carlos@mail.com");
+        PatientAppointmentHistoryResponse response = new PatientAppointmentHistoryResponse(patient, Collections.emptyList());
+
+        when(appointmentService.getAppointmentHistoryByDocument(doc)).thenReturn(response);
+
+        mockMvc.perform(get("/api/appointments/patient/document/{documentNumber}/history", doc))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.patient.documentNumber").value(doc))
+                .andExpect(jsonPath("$.appointments").isEmpty());
+    }
+
+    @Test
+    void testCA3_GetAppointmentHistoryByDocument_NotFound() throws Exception {
+        String doc = "9999999999";
+        when(appointmentService.getAppointmentHistoryByDocument(doc))
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró ningún paciente registrado con la cédula ingresada"));
+
+        mockMvc.perform(get("/api/appointments/patient/document/{documentNumber}/history", doc))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("No se encontró ningún paciente registrado con la cédula ingresada"));
+    }
+
+    @Test
+    void testCA4_GetAppointmentHistoryByDocument_InvalidFormat() throws Exception {
+        String doc = "invalid-doc";
+        when(appointmentService.getAppointmentHistoryByDocument(doc))
+                .thenThrow(new IllegalArgumentException("El campo es obligatorio y solo acepta caracteres numéricos válidos."));
+
+        mockMvc.perform(get("/api/appointments/patient/document/{documentNumber}/history", doc))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("El campo es obligatorio y solo acepta caracteres numéricos válidos."));
     }
 }

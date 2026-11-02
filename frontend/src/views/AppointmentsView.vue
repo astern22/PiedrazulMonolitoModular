@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
+import { useRouter } from "vue-router";
 import {
   appointmentService,
   schedulingService,
@@ -10,7 +11,17 @@ import { useAuth } from "@/composables/useAuth";
 import { validateAppointmentForm, hasErrors } from "@/utils/validators";
 import { professionalLabel, professionalNameById } from "@/utils/professionals";
 
-const { canManage, isPatient } = useAuth();
+const router = useRouter();
+const { canManage, isPatient, isDoctor, isProfessional, isScheduler, isAdmin } = useAuth();
+const canConsultHistory = computed(
+  () =>
+    !isPatient.value &&
+    (isDoctor.value ||
+      isProfessional.value ||
+      isScheduler.value ||
+      isAdmin.value ||
+      canManage.value),
+);
 
 const appointments = ref([]);
 // Todos los profesionales (para mostrar el nombre en la tabla) y los activos (para elegir)
@@ -38,6 +49,109 @@ const patientSearch = ref({
   isSearching: false,
   error: "",
 });
+
+// Historial de citas por cedula (E4-HU3: MEDICO, AGENDADOR, TERAPISTA, ADMIN)
+const historySearch = ref({
+  documentNumber: "",
+  isLoading: false,
+  hasSearched: false,
+  error: "",
+  patient: null,
+  appointments: [],
+  isWarningNotFound: false,
+});
+
+function validateHistoryDocument() {
+  const doc = historySearch.value.documentNumber.trim();
+  if (!doc || !/^\d+$/.test(doc)) {
+    historySearch.value.error =
+      "El campo es obligatorio y solo acepta caracteres numéricos válidos.";
+    return false;
+  }
+  historySearch.value.error = "";
+  return true;
+}
+
+function onHistoryDocumentInput() {
+  if (historySearch.value.error && !historySearch.value.isWarningNotFound) {
+    validateHistoryDocument();
+  }
+}
+
+async function handleConsultHistory() {
+  historySearch.value.isWarningNotFound = false;
+  historySearch.value.patient = null;
+  historySearch.value.appointments = [];
+
+  // CA4: Validacion de formato de documento invalido
+  if (!validateHistoryDocument()) {
+    historySearch.value.hasSearched = false;
+    return;
+  }
+
+  historySearch.value.isLoading = true;
+  historySearch.value.error = "";
+  try {
+    const data = await appointmentService.getHistoryByDocument(
+      historySearch.value.documentNumber.trim(),
+    );
+    historySearch.value.patient = data.patient;
+    historySearch.value.appointments = data.appointments || [];
+    historySearch.value.hasSearched = true;
+  } catch (err) {
+    historySearch.value.hasSearched = true;
+    const status = err.response?.status;
+    const msg = err.response?.data?.message || err.message;
+    if (
+      status === 404 ||
+      (msg && msg.includes("No se encontró ningún paciente"))
+    ) {
+      // CA3: Cedula no registrada en el sistema
+      historySearch.value.isWarningNotFound = true;
+      historySearch.value.error =
+        "No se encontró ningún paciente registrado con la cédula ingresada";
+    } else {
+      historySearch.value.error =
+        msg || "Ocurrió un error al consultar el historial de citas.";
+    }
+  } finally {
+    historySearch.value.isLoading = false;
+  }
+}
+
+function handleClearHistory() {
+  historySearch.value = {
+    documentNumber: "",
+    isLoading: false,
+    hasSearched: false,
+    error: "",
+    patient: null,
+    appointments: [],
+    isWarningNotFound: false,
+  };
+}
+
+function navigateToRegisterPatient() {
+  router.push("/patients");
+}
+
+function getStatusBadgeClass(status) {
+  const s = String(status || "").toUpperCase();
+  if (s === "SCHEDULED" || s === "PROGRAMADA") return "status-scheduled";
+  if (s === "COMPLETED" || s === "COMPLETADA" || s === "ATENDIDA")
+    return "status-completed";
+  if (s === "CANCELLED" || s === "CANCELADA" || s === "INASISTENCIA")
+    return "status-cancelled";
+  return "status-scheduled";
+}
+
+function formatStatus(status) {
+  const s = String(status || "").toUpperCase();
+  if (s === "SCHEDULED") return "PROGRAMADA";
+  if (s === "COMPLETED") return "ATENDIDA";
+  if (s === "CANCELLED") return "CANCELADA";
+  return status;
+}
 
 // Franjas de horario disponibles
 const availableSlots = ref([]);
@@ -663,6 +777,178 @@ onMounted(async () => {
       </form>
     </div>
 
+    <!-- Historial de Citas por Cedula (E4-HU3: MEDICO, AGENDADOR, TERAPISTA, ADMIN) -->
+    <div v-if="canConsultHistory" class="card history-card">
+      <div class="history-card-header">
+        <div>
+          <h3>Consultar Historial de Citas por Cédula</h3>
+        </div>
+      </div>
+
+      <form @submit.prevent="handleConsultHistory" class="history-search-form" novalidate>
+        <div class="form-group" style="flex: 1; min-width: 260px; max-width: 420px;">
+          <label for="historyDocumentNumber">Cédula del Paciente</label>
+          <input
+            id="historyDocumentNumber"
+            v-model="historySearch.documentNumber"
+            type="text"
+            placeholder="Ingrese el número de cédula (ej. 1061789234)"
+            :class="{ 'input-invalid': !!historySearch.error && !historySearch.isWarningNotFound }"
+            :disabled="historySearch.isLoading"
+            @input="onHistoryDocumentInput"
+          />
+          <!-- CA4: Bloquea, resalta en rojo y despliega alerta -->
+          <span
+            v-if="historySearch.error && !historySearch.isWarningNotFound"
+            class="field-error-msg"
+            role="alert"
+          >
+            {{ historySearch.error }}
+          </span>
+        </div>
+
+        <div class="history-actions">
+          <button
+            type="submit"
+            class="btn btn-primary"
+            :disabled="historySearch.isLoading"
+          >
+            <span v-if="historySearch.isLoading" class="spinner-sm"></span>
+            <span v-else>Buscar / Consultar</span>
+          </button>
+          <button
+            v-if="historySearch.hasSearched || historySearch.documentNumber"
+            type="button"
+            class="btn btn-secondary"
+            @click="handleClearHistory"
+            :disabled="historySearch.isLoading"
+          >
+            Limpiar
+          </button>
+        </div>
+      </form>
+
+      <!-- CA3: Notificacion de advertencia si la cedula no corresponde a ningun paciente -->
+      <div v-if="historySearch.isWarningNotFound" class="alert alert-warning-custom mt-3">
+        <div class="warning-content">
+          <div class="warning-icon">⚠️</div>
+          <div>
+            <strong>{{ historySearch.error }}</strong>
+            <p class="suggestion-text">
+              Sugerencia: puedes registrar este paciente en el sistema.
+              <a
+                href="#"
+                @click.prevent="navigateToRegisterPatient"
+                class="register-link"
+              >
+                Ir a registro de pacientes
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resultados de la consulta -->
+      <div v-if="historySearch.patient && !historySearch.isLoading" class="history-results mt-4">
+        <!-- Informacion basica del paciente (CA1 y CA2) -->
+        <div class="patient-summary-box">
+          <div class="patient-summary-header">
+            <h4>Información Básica del Paciente</h4>
+            <span class="badge-patient">Paciente Registrado</span>
+          </div>
+          <div class="patient-details-grid">
+            <div>
+              <span class="detail-label">Nombre Completo:</span>
+              <span class="detail-value">
+                {{ historySearch.patient.fullName || "Sin cuenta de usuario asociada" }}
+              </span>
+            </div>
+            <div>
+              <span class="detail-label">Cédula:</span>
+              <span class="detail-value font-mono">
+                {{ historySearch.patient.documentNumber }}
+              </span>
+            </div>
+            <div>
+              <span class="detail-label">Teléfono:</span>
+              <span class="detail-value">
+                {{ historySearch.patient.phone || "No registrado" }}
+              </span>
+            </div>
+            <div>
+              <span class="detail-label">Correo Electrónico:</span>
+              <span class="detail-value">
+                {{ historySearch.patient.email || "No registrado" }}
+              </span>
+            </div>
+            <div>
+              <span class="detail-label">Fecha de Nacimiento:</span>
+              <span class="detail-value">
+                {{ historySearch.patient.birthDate || "No registrada" }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CA1: Listado cronologico con historial completo de citas -->
+        <div
+          v-if="historySearch.appointments.length > 0"
+          class="history-table-container mt-3"
+        >
+          <div class="history-table-header">
+            <h4>Historial de Citas Médicas ({{ historySearch.appointments.length }})</h4>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Hora</th>
+                  <th>Especialista</th>
+                  <th>Especialidad</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="apt in historySearch.appointments" :key="apt.id">
+                  <td>
+                    <strong>{{ apt.appointmentDate }}</strong>
+                  </td>
+                  <td>
+                    {{ apt.startTime ? apt.startTime.substring(0, 5) : "" }} -
+                    {{ apt.endTime ? apt.endTime.substring(0, 5) : "" }}
+                  </td>
+                  <td>{{ apt.professionalName }}</td>
+                  <td>
+                    <span class="specialty-pill">{{ apt.specialtyName }}</span>
+                  </td>
+                  <td>
+                    <span
+                      class="status-badge"
+                      :class="getStatusBadgeClass(apt.status)"
+                    >
+                      {{ formatStatus(apt.status) }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- CA2: Paciente registrado sin citas previas -->
+        <div v-else class="empty-history-box mt-3">
+          <div class="empty-history-icon">📋</div>
+          <p class="empty-history-message">
+            El paciente no registra citas médicas en el historial
+          </p>
+          <span class="text-muted-xs">
+            No se encontraron citas agendadas ni atendidas registradas para este paciente.
+          </span>
+        </div>
+      </div>
+    </div>
+
     <!-- Barra de busqueda y filtros -->
     <div class="card filter-card">
       <h4>Filtrar Citas por Profesional o Fecha</h4>
@@ -1197,6 +1483,187 @@ onMounted(async () => {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ==========================================================================
+   Estilos Historial de Citas por Cedula (E4-HU3)
+   ========================================================================== */
+.history-card {
+  border-left: 4px solid #2563eb;
+}
+
+.history-card-header {
+  margin-bottom: 1rem;
+}
+
+.section-desc {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin: 0.25rem 0 0;
+}
+
+.history-search-form {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.history-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.7rem;
+}
+
+.input-invalid {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 1px #ef4444 !important;
+  background-color: #fef2f2 !important;
+}
+
+.field-error-msg {
+  color: #dc2626;
+  font-size: 0.8rem;
+  margin-top: 0.35rem;
+  display: block;
+  font-weight: 500;
+}
+
+.alert-warning-custom {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.warning-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.warning-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.suggestion-text {
+  margin: 0.4rem 0 0 0;
+  font-size: 0.875rem;
+  color: #78350f;
+}
+
+.register-link {
+  color: #b45309;
+  text-decoration: underline;
+  font-weight: 600;
+  margin-left: 0.25rem;
+  cursor: pointer;
+}
+
+.register-link:hover {
+  color: #78350f;
+}
+
+.patient-summary-box {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 1.25rem;
+  border: 1px solid #e2e8f0;
+}
+
+.patient-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.patient-summary-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: #1e293b;
+}
+
+.badge-patient {
+  background: #dbeafe;
+  color: #1e40af;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+}
+
+.patient-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.detail-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.detail-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.font-mono {
+  font-family: monospace;
+}
+
+.specialty-pill {
+  background: #f3e8ff;
+  color: #6b21a8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.history-table-container {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.history-table-header {
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.history-table-header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+
+.empty-history-box {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 2.5rem 1rem;
+  text-align: center;
+}
+
+.empty-history-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.empty-history-message {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #334155;
+  margin: 0 0 0.25rem 0;
 }
 
 </style>

@@ -49,6 +49,9 @@ public class SecurityConfig {
                                 .hasAnyRole("ADMIN", "SCHEDULER")
                                 .requestMatchers(HttpMethod.DELETE, "/api/appointments/**")
                                 .hasAnyRole("ADMIN", "SCHEDULER")
+                                // Historial de citas por cedula: solo personal (medico, agendador, terapista, admin)
+                                .requestMatchers(HttpMethod.GET, "/api/appointments/patient/document/*/history")
+                                .hasAnyRole("ADMIN", "SCHEDULER", "PROFESSIONAL")
                                 // Listados y consultas generales de citas: solo personal
                                 .requestMatchers("/api/appointments/**")
                                 .hasAnyRole("ADMIN", "SCHEDULER", "PROFESSIONAL")

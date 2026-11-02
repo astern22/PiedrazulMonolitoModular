@@ -8,6 +8,7 @@ import co.edu.unicauca.piedrazul.appointments.infrastructure.persistence.Appoint
 import co.edu.unicauca.piedrazul.appointments.presentation.command.CreateAppointmentCommand;
 import co.edu.unicauca.piedrazul.appointments.presentation.dto.AppointmentRequest;
 import co.edu.unicauca.piedrazul.appointments.presentation.dto.AppointmentResponse;
+import co.edu.unicauca.piedrazul.appointments.presentation.dto.PatientAppointmentHistoryResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -106,6 +107,11 @@ public class AppointmentController {
     @GetMapping("/patient/{patientId}")
     public ResponseEntity<List<AppointmentEntity>> getAppointmentsByPatientId(@PathVariable Long patientId) {
         return ResponseEntity.ok(service.getAppointmentsByPatientId(patientId));
+    }
+
+    @GetMapping("/patient/document/{documentNumber}/history")
+    public ResponseEntity<PatientAppointmentHistoryResponse> getAppointmentHistoryByDocument(@PathVariable String documentNumber) {
+        return ResponseEntity.ok(service.getAppointmentHistoryByDocument(documentNumber));
     }
 
     @DeleteMapping("/{id}")
