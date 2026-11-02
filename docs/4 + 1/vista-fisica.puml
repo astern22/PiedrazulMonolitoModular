@@ -1,0 +1,12 @@
+@startuml
+title Vista Física
+node "Navegador" {
+  [SPA Vue]
+}
+node "Servidor" {
+  [API Spring Boot :8080]
+}
+database "PostgreSQL :5432" as DB
+[SPA Vue] --> [API Spring Boot :8080] : HTTP/JSON + JWT
+[API Spring Boot :8080] --> DB : JDBC
+@enduml

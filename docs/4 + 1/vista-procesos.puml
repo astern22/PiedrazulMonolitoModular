@@ -1,0 +1,23 @@
+@startuml
+title Vista de Procesos - Agendar una cita
+actor Usuario
+participant "SPA Vue" as SPA
+participant "Filtro JWT" as F
+participant AppointmentController as C
+participant AppointmentService as S
+database PostgreSQL as DB
+Usuario -> SPA : agenda una cita
+SPA -> F : POST /api/appointments/create + token
+alt token inválido o rol sin permiso
+  F --> SPA : rechazo (401/403)
+else autorizado
+  F -> C : petición
+  C -> S : createAppointment
+  S -> DB : guardar cita
+  alt horario ocupado
+    DB --> SPA : error 409
+  else
+    C --> SPA : cita creada
+  end
+end
+@enduml

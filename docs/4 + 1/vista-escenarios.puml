@@ -1,0 +1,19 @@
+@startuml
+left to right direction
+title Vista de Escenarios
+actor Paciente
+actor Agendador
+actor Profesional
+actor Administrador
+Paciente --> (Registrarse)
+Paciente --> (Agendar cita)
+Agendador --> (Agendar cita)
+Agendador --> (Listar citas)
+Agendador --> (Exportar citas CSV)
+Agendador --> (Listar citas por cédula)
+Profesional --> (Listar citas)
+Profesional --> (Exportar citas CSV)
+Profesional --> (Listar citas por cédula)
+Administrador --> (Asignar rol)
+Administrador --> (Configurar agendamiento)
+@enduml

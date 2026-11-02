@@ -1,0 +1,12 @@
+@startuml
+title Vista de Desarrollo
+package "Frontend (Vue 3)" {
+  [Vistas] --> [Servicios API]
+}
+package "Backend (Spring Boot)" {
+  [Presentation] --> [Application]
+  [Application] --> [Infrastructure]
+  [Seguridad] ..> [Presentation] : protege
+}
+[Servicios API] ..> [Presentation] : REST/JSON
+@enduml

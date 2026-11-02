@@ -1,0 +1,17 @@
+@startuml
+title Vista Lógica
+class User
+class Role
+class Patient
+class Professional
+class Specialty
+class WeeklyAvailability
+class Appointment
+User "*" -- "*" Role
+User "1" -- "0..1" Professional
+User "0..1" -- "0..1" Patient
+Professional "*" -- "1" Specialty
+WeeklyAvailability "*" -- "1" Professional
+Appointment "*" -- "1" Patient
+Appointment "*" -- "1" Professional
+@enduml
