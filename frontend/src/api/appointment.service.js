@@ -55,19 +55,19 @@ export const appointmentService = {
   },
 
   /**
-   * Busca citas por profesional y fecha.
+   * Busca citas por profesional, por fecha o por ambos.
+   * Debe enviarse al menos uno de los dos criterios.
    * @param {Object} params
-   * @param {number|string} params.professionalId - ID del profesional
-   * @param {string} params.date - Fecha en formato YYYY-MM-DD
+   * @param {number|string} [params.professionalId] - ID del profesional
+   * @param {string} [params.date] - Fecha en formato YYYY-MM-DD
    * @returns {Promise<Array<Object>>}
    */
-  async search({ professionalId, date }) {
-    const response = await apiClient.get('/api/appointments/search', {
-      params: {
-        professionalId,
-        date,
-      },
-    })
+  async search({ professionalId, date } = {}) {
+    const params = {}
+    if (professionalId) params.professionalId = professionalId
+    if (date) params.date = date
+
+    const response = await apiClient.get('/api/appointments/search', { params })
     return response.data
   },
 

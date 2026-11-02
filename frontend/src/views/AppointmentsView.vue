@@ -10,11 +10,12 @@ import { useAuth } from "@/composables/useAuth";
 import { validateAppointmentForm, hasErrors } from "@/utils/validators";
 import { professionalLabel, professionalNameById } from "@/utils/professionals";
 
-const { canManage, isPatient } = useAuth();
+const { canManage, isPatient, isProfessional } = useAuth();
 
 const appointments = ref([]);
 // Todos los profesionales (para mostrar el nombre en la tabla) y los activos (para elegir)
 const allProfessionals = ref([]);
+const myProfessionalId = ref(null);
 const professionals = computed(() =>
   allProfessionals.value.filter((prof) => prof.active !== false),
 );
@@ -161,9 +162,25 @@ function recalculateEndTime() {
   }
 }
 
+// Ordena las citas por fecha y hora de inicio
+function sortByDateTime(list) {
+  return [...list].sort((a, b) =>
+    `${a.appointmentDate} ${a.startTime}`.localeCompare(
+      `${b.appointmentDate} ${b.startTime}`,
+    ),
+  );
+}
+
 async function loadProfessionals() {
   try {
-    allProfessionals.value = await professionalService.getAll();
+    if (isProfessional.value) {
+      // El medico solo trabaja con su propio perfil
+      const me = await professionalService.getMe();
+      allProfessionals.value = [me];
+      myProfessionalId.value = me.id;
+    } else {
+      allProfessionals.value = await professionalService.getAll();
+    }
   } catch (error) {
     console.error("Error al cargar lista de profesionales:", error);
   }
@@ -174,12 +191,27 @@ async function fetchAppointments() {
   errorMessage.value = "";
   isFiltered.value = false;
   try {
-    // Un paciente solo debe ver SUS PROPIAS citas, nunca las de otros pacientes.
     if (isPatient.value) {
+      // El paciente solo ve sus propias citas
       appointments.value = currentPatient.value
         ? await appointmentService.getByPatientId(currentPatient.value.id)
         : [];
+    } else if (isProfessional.value) {
+      // El medico ve por defecto todas sus citas; la fecha es opcional
+      filter.value.professionalId = myProfessionalId.value || "";
+      if (filter.value.professionalId) {
+        appointments.value = sortByDateTime(
+          await appointmentService.search({
+            professionalId: filter.value.professionalId,
+            date: filter.value.date,
+          }),
+        );
+        isFiltered.value = true;
+      } else {
+        appointments.value = [];
+      }
     } else {
+      // SCHEDULER y ADMIN ven todas las citas
       appointments.value = await appointmentService.getAll();
     }
   } catch (error) {
@@ -238,8 +270,8 @@ function selectSlot(slot, index) {
 }
 
 async function handleSearch() {
-  if (!filter.value.professionalId || !filter.value.date) {
-    errorMessage.value = "Para buscar, selecciona el profesional y la fecha.";
+  if (!filter.value.professionalId && !filter.value.date) {
+    errorMessage.value = "Para buscar, selecciona un profesional o una fecha.";
     return;
   }
 
@@ -247,10 +279,12 @@ async function handleSearch() {
   errorMessage.value = "";
   isFiltered.value = true;
   try {
-    appointments.value = await appointmentService.search({
-      professionalId: filter.value.professionalId,
-      date: filter.value.date,
-    });
+    appointments.value = sortByDateTime(
+      await appointmentService.search({
+        professionalId: filter.value.professionalId,
+        date: filter.value.date,
+      }),
+    );
   } catch (error) {
     errorMessage.value =
       error.message || "Error al buscar citas con los criterios indicados.";
@@ -398,7 +432,7 @@ async function handleDelete(id) {
 }
 
 onMounted(async () => {
-  loadProfessionals();
+  await loadProfessionals();
 
   if (isPatient.value) {
     await loadPatientsList();
@@ -614,13 +648,13 @@ onMounted(async () => {
     </div>
 
     <!-- Barra de busqueda y filtros -->
-    <div class="card filter-card">
-      <h4>Filtrar Citas por Profesional y Fecha</h4>
+    <div v-if="!isPatient" class="card filter-card">
+      <h4>Filtrar Citas por Profesional o Fecha</h4>
       <form @submit.prevent="handleSearch" class="filter-form">
         <div class="form-group">
           <label for="filterProfId">Profesional</label>
-          <select id="filterProfId" v-model="filter.professionalId">
-            <option value="">Selecciona un profesional</option>
+          <select id="filterProfId" v-model="filter.professionalId" :disabled="isProfessional">
+            <option value="">Todos los profesionales</option>
             <option
               v-for="prof in professionals"
               :key="prof.id"

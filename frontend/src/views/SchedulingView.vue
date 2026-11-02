@@ -5,7 +5,7 @@ import { useAuth } from '@/composables/useAuth'
 import { validateIntervalMinutes, findOverlappingAvailability } from '@/utils/validators'
 import { professionalLabel, professionalName } from '@/utils/professionals'
 
-const { canManage } = useAuth()
+const { canManage, isProfessional } = useAuth()
 
 // ─── Constantes de la grilla ───
 const DAYS = [
@@ -192,7 +192,7 @@ function onStartChange() {
 
 // Clic en un espacio vacio de la grilla: pre-llena ese dia y esa hora
 function onColumnClick(event, dayValue) {
-  if (!canManage.value || event.target.closest('.block')) return
+  if ((!canManage.value && !isProfessional.value) || event.target.closest('.block')) return
   const rect = event.currentTarget.getBoundingClientRect()
   const minutes = gridRange.value.start + (event.clientY - rect.top) / PX_PER_MIN
   const start = Math.min(Math.floor(minutes / STEP) * STEP, DAY_END - STEP)
@@ -204,14 +204,24 @@ function onColumnClick(event, dayValue) {
 // ─── Carga de datos ───
 async function loadProfessionals(keepSelection = false) {
   try {
-    professionals.value = await professionalService.getActive()
-    if (professionals.value.length === 0) return
-    const stillExists = professionals.value.some(p => String(p.id) === String(selectedProfId.value))
-    if (!keepSelection || !stillExists) selectedProfId.value = professionals.value[0].id
+    if (isProfessional.value) {
+      // El medico solo carga su propio perfil con el endpoint /me
+      const myProf = await professionalService.getMe()
+      // Lo ponemos en el listado para que el selector lo muestre
+      professionals.value = [myProf]
+      selectedProfId.value = myProf.id
+    } else {
+      professionals.value = await professionalService.getActive()
+      if (professionals.value.length === 0) return
+      const stillExists = professionals.value.some(p => String(p.id) === String(selectedProfId.value))
+      if (!keepSelection || !stillExists) selectedProfId.value = professionals.value[0].id
+    }
+
     syncInterval()
     await fetchAvailabilities()
   } catch (error) {
     console.error('Error al cargar lista de profesionales:', error)
+    errorMessage.value = error.message || 'No se pudo cargar la informacion del profesional.'
   }
 }
 
@@ -270,7 +280,7 @@ async function handleSave() {
 }
 
 async function handleDeactivate(item) {
-  if (!canManage.value) return
+  if (!canManage.value && !isProfessional.value) return
   if (!confirm(`¿Quitar el horario del ${dayName(item.dayOfWeek)} ${formatHour(item.startTime)} - ${formatHour(item.endTime)}?`)) return
   errorMessage.value = ''
   successMessage.value = ''
@@ -335,7 +345,7 @@ onMounted(() => loadProfessionals())
       </div>
       <div class="prof-picker">
         <label for="profSelect">Profesional</label>
-        <select id="profSelect" v-model="selectedProfId" @change="handleProfessionalChange">
+        <select id="profSelect" v-model="selectedProfId" @change="handleProfessionalChange" :disabled="isProfessional">
           <option value="" disabled>Selecciona un profesional</option>
           <option v-for="prof in professionals" :key="prof.id" :value="prof.id">
             {{ professionalLabel(prof) }}
@@ -355,7 +365,7 @@ onMounted(() => loadProfessionals())
       <div class="layout-grid">
         <div class="column">
           <!-- ═══ Agregar horario (ADMIN / SCHEDULER) ═══ -->
-          <div v-if="canManage" class="card">
+          <div v-if="canManage || isProfessional" class="card">
             <h3>Agregar horario</h3>
 
             <div class="form-group">
@@ -403,7 +413,7 @@ onMounted(() => loadProfessionals())
             <p class="section-desc">
               Tiempo que dura cada cita de {{ professionalName(selectedProfessional) }}. Las citas ya agendadas no se modifican.
             </p>
-            <form v-if="canManage" @submit.prevent="handleSaveInterval" class="interval-form" novalidate>
+            <form v-if="canManage || isProfessional" @submit.prevent="handleSaveInterval" class="interval-form" novalidate>
               <div class="form-group interval-input">
                 <label for="intervalMinutes">Minutos por cita</label>
                 <input id="intervalMinutes" v-model="intervalMinutes" type="number" min="5" max="480" step="5" :disabled="isSavingInterval" />
@@ -414,7 +424,7 @@ onMounted(() => loadProfessionals())
               </button>
             </form>
             <span v-if="intervalError" class="field-error">{{ intervalError }}</span>
-            <p v-if="!canManage" class="interval-readonly">
+            <p v-if="!canManage && !isProfessional" class="interval-readonly">
               <strong>{{ selectedProfessional.appointmentIntervalMinutes }} minutos</strong> por cita
             </p>
           </div>
@@ -462,7 +472,7 @@ onMounted(() => loadProfessionals())
           <h3>Semana de {{ professionalName(selectedProfessional) }}</h3>
           <span class="legend"><i class="dot dot-block"></i> Atiende <i class="dot dot-new"></i> Nuevo <i class="dot dot-bad"></i> Se cruza</span>
         </div>
-        <p class="section-desc" v-if="canManage">
+        <p class="section-desc" v-if="canManage || isProfessional">
           Las franjas moradas son los horarios actuales. Haz clic en un espacio vacio para empezar uno nuevo, o usa el panel de arriba.
         </p>
 
@@ -473,7 +483,7 @@ onMounted(() => loadProfessionals())
         <div class="week-scroll">
           <div class="week">
             <div class="week-corner"></div>
-            <div v-for="d in DAYS" :key="d.value" class="week-head" :class="{ 'is-selected': canManage && selectedDays.includes(d.value) }">{{ d.short }}</div>
+            <div v-for="d in DAYS" :key="d.value" class="week-head" :class="{ 'is-selected': (canManage || isProfessional) && selectedDays.includes(d.value) }">{{ d.short }}</div>
 
             <div class="hours-col" :style="{ height: gridHeight + 'px' }">
               <span v-for="m in hourLabels" :key="m" class="hour-label" :style="{ top: (m - gridRange.start) * PX_PER_MIN + 'px' }">{{ toTime(m) }}</span>
@@ -498,12 +508,12 @@ onMounted(() => loadProfessionals())
                 :title="`${d.name} ${formatHour(item.startTime)} - ${formatHour(item.endTime)}`"
               >
                 <span>{{ formatHour(item.startTime) }}<br />{{ formatHour(item.endTime) }}</span>
-                <button v-if="canManage" type="button" class="block-x" title="Quitar horario" @click.stop="handleDeactivate(item)">×</button>
+                <button v-if="canManage || isProfessional" type="button" class="block-x" title="Quitar horario" @click.stop="handleDeactivate(item)">×</button>
               </div>
 
               <!-- Vista previa del horario que se esta creando -->
               <div
-                v-if="canManage && selectedDays.includes(d.value) && rangeIsValid"
+                v-if="(canManage || isProfessional) && selectedDays.includes(d.value) && rangeIsValid"
                 class="block block-new"
                 :class="{ 'block-new-bad': conflictsByDay[d.value] }"
                 :style="blockStyle(toMinutes(startTime), toMinutes(endTime))"

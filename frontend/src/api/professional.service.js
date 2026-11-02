@@ -94,6 +94,15 @@ export const professionalService = {
   },
 
   /**
+   * Obtiene el profesional del usuario autenticado (solo rol PROFESSIONAL).
+   * @returns {Promise<Object>}
+   */
+  async getMe() {
+    const response = await apiClient.get('/api/professionals/me')
+    return response.data
+  },
+
+  /**
    * Obtiene los profesionales pertenecientes a una especialidad.
    * @param {number|string} specialtyId - ID de la especialidad
    * @returns {Promise<Array<Object>>}
