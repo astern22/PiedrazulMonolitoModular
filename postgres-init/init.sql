@@ -1,0 +1,335 @@
+-- PiedrazulDB ver6 init
+--
+-- IMPORTANTE: este script lo ejecuta la imagen de postgres SOLO la primera vez
+-- que se inicializa el volumen de datos, conectado a POSTGRES_DB (piedrazuldb)
+-- como POSTGRES_USER (postgres). Por eso aqui NO se crea la base de datos ni se
+-- toca el rol con el que se esta ejecutando el script.
+
+-- Eliminar schema (arrastra tablas, indices, secuencias y constraints)
+DROP SCHEMA IF EXISTS piedrazul CASCADE;
+
+-- Crear rol propietario de los objetos de la aplicacion (idempotente)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'piedrazul_admin') THEN
+        CREATE ROLE piedrazul_admin WITH LOGIN PASSWORD 'Piedrazul123.';
+    END IF;
+END
+$$;
+
+-- Crear schema propiedad del rol de la aplicacion
+CREATE SCHEMA piedrazul AUTHORIZATION piedrazul_admin;
+
+-- Crear los objetos como piedrazul_admin para que la app sea su propietaria
+-- (si se crean como postgres, la app no tendria permisos ni con ddl-auto=validate)
+SET ROLE piedrazul_admin;
+SET search_path TO piedrazul;
+
+-- Tablas
+CREATE TABLE roles (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(30) NOT NULL UNIQUE
+);
+
+CREATE TABLE users (
+    id BIGSERIAL PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    full_name VARCHAR(150) NOT NULL,
+    email VARCHAR(120) NOT NULL UNIQUE,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE user_roles (
+    user_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
+
+    PRIMARY KEY (user_id, role_id),
+
+    CONSTRAINT fk_user_roles_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id),
+
+    CONSTRAINT fk_user_roles_role
+        FOREIGN KEY (role_id)
+        REFERENCES roles(id)
+);
+
+CREATE TABLE specialties (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE
+);
+
+CREATE TABLE professionals (
+    id BIGSERIAL PRIMARY KEY,
+
+    user_id BIGINT NOT NULL UNIQUE,
+
+    specialty_id BIGINT NOT NULL,
+
+    appointment_interval_minutes INTEGER NOT NULL,
+
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    CONSTRAINT fk_professional_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id),
+
+    CONSTRAINT fk_professional_specialty
+        FOREIGN KEY (specialty_id)
+        REFERENCES specialties(id)
+);
+
+CREATE TABLE patients (
+    id BIGSERIAL PRIMARY KEY,
+
+    user_id BIGINT UNIQUE,
+
+    document_number VARCHAR(20) NOT NULL UNIQUE,
+
+    phone VARCHAR(20),
+
+    birth_date DATE,
+
+    CONSTRAINT fk_patient_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+);
+
+CREATE TABLE system_settings (
+    id BIGSERIAL PRIMARY KEY,
+
+    booking_window_weeks INTEGER NOT NULL
+);
+
+CREATE TABLE weekly_availability (
+    id BIGSERIAL PRIMARY KEY,
+
+    professional_id BIGINT NOT NULL,
+
+    day_of_week INTEGER NOT NULL,
+
+    start_time TIME NOT NULL,
+
+    end_time TIME NOT NULL,
+
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    CONSTRAINT fk_availability_professional
+        FOREIGN KEY (professional_id)
+        REFERENCES professionals(id)
+);
+
+CREATE TABLE appointments (
+    id BIGSERIAL PRIMARY KEY,
+
+    patient_id BIGINT NOT NULL,
+
+    professional_id BIGINT NOT NULL,
+
+    appointment_date DATE NOT NULL,
+
+    start_time TIME NOT NULL,
+
+    end_time TIME NOT NULL,
+
+    status VARCHAR(20) NOT NULL,
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_appointment_patient
+        FOREIGN KEY (patient_id)
+        REFERENCES patients(id),
+
+    CONSTRAINT fk_appointment_professional
+        FOREIGN KEY (professional_id)
+        REFERENCES professionals(id)
+);
+
+-- Evita doble reserva del mismo profesional
+CREATE UNIQUE INDEX uk_professional_slot
+ON appointments (
+    professional_id,
+    appointment_date,
+    start_time
+);
+
+-- Inserciones
+INSERT INTO specialties (name)
+VALUES
+('Medico'),
+('Terapeuta');
+
+INSERT INTO roles (name)
+VALUES
+('ADMIN'),
+('PATIENT'),
+('PROFESSIONAL'),
+('SCHEDULER');
+
+-- Crear medicos
+INSERT INTO piedrazul.users (username, password, full_name, email, enabled)
+VALUES ('medico1', '1234', 'Dr. Carlos Perez', 'medico1@piedrazul.com', TRUE);
+
+INSERT INTO piedrazul.users (username, password, full_name, email, enabled)
+VALUES ('terapeuta1', '1234', 'Dr. Carlos Perez', 'terapeuta1@piedrazul.com', TRUE);
+
+INSERT INTO piedrazul.user_roles (user_id, role_id)
+SELECT u.id, r.id
+FROM piedrazul.users u
+CROSS JOIN piedrazul.roles r
+WHERE u.username = 'medico1'
+  AND r.name = 'PROFESSIONAL';
+
+INSERT INTO piedrazul.user_roles (user_id, role_id)
+SELECT u.id, r.id
+FROM piedrazul.users u
+CROSS JOIN piedrazul.roles r
+WHERE u.username = 'terapeuta1'
+  AND r.name = 'PROFESSIONAL';
+
+INSERT INTO piedrazul.professionals (user_id, specialty_id, appointment_interval_minutes, active)
+SELECT u.id, s.id, 30, TRUE
+FROM piedrazul.users u
+CROSS JOIN piedrazul.specialties s
+WHERE u.username = 'medico1'
+  AND s.name = 'Medico';
+
+INSERT INTO piedrazul.professionals (user_id, specialty_id, appointment_interval_minutes, active)
+SELECT u.id, s.id, 60, TRUE
+FROM piedrazul.users u
+CROSS JOIN piedrazul.specialties s
+WHERE u.username = 'terapeuta1'
+  AND s.name = 'Terapeuta';
+
+
+-- Desactivar profesional
+UPDATE piedrazul.users
+SET enabled = FALSE
+WHERE username = 'terapeuta1';
+
+UPDATE piedrazul.professionals
+SET active = FALSE
+WHERE user_id = (
+    SELECT id
+    FROM piedrazul.users
+    WHERE username = 'terapeuta1'
+);
+
+-- Disponibilidad semanal
+INSERT INTO piedrazul.weekly_availability
+    (professional_id, day_of_week, start_time, end_time, active)
+SELECT
+    p.id,
+    1,
+    '08:00',
+    '12:00',
+    TRUE
+FROM piedrazul.professionals p
+JOIN piedrazul.users u ON u.id = p.user_id
+WHERE u.username = 'medico1';
+
+INSERT INTO piedrazul.weekly_availability
+    (professional_id, day_of_week, start_time, end_time, active)
+SELECT
+    p.id,
+    1,
+    '14:00',
+    '18:00',
+    TRUE
+FROM piedrazul.professionals p
+JOIN piedrazul.users u ON u.id = p.user_id
+WHERE u.username = 'medico1';
+
+INSERT INTO piedrazul.weekly_availability
+    (professional_id, day_of_week, start_time, end_time, active)
+SELECT
+    p.id,
+    3,
+    '08:00',
+    '12:00',
+    TRUE
+FROM piedrazul.professionals p
+JOIN piedrazul.users u ON u.id = p.user_id
+WHERE u.username = 'medico1';
+
+INSERT INTO piedrazul.weekly_availability
+    (professional_id, day_of_week, start_time, end_time, active)
+SELECT
+    p.id,
+    5,
+    '08:00',
+    '10:00',
+    TRUE
+FROM piedrazul.professionals p
+JOIN piedrazul.users u ON u.id = p.user_id
+WHERE u.username = 'medico1';
+
+-- Cita ocupada
+INSERT INTO piedrazul.users
+    (username, password, full_name, email, enabled)
+VALUES
+    ('paciente1', '1234', 'Juan Perez', 'paciente1@piedrazul.com', TRUE);
+
+INSERT INTO piedrazul.user_roles (user_id, role_id)
+SELECT u.id, r.id
+FROM piedrazul.users u
+CROSS JOIN piedrazul.roles r
+WHERE u.username = 'paciente1'
+  AND r.name = 'PATIENT';
+
+INSERT INTO piedrazul.patients
+    (user_id, document_number, phone, birth_date)
+SELECT
+    u.id,
+    '1234567890',
+    '3001234567',
+    '2000-05-15'
+FROM piedrazul.users u
+WHERE u.username = 'paciente1';
+
+SELECT
+    p.id AS professional_id,
+    u.username
+FROM piedrazul.professionals p
+JOIN piedrazul.users u
+    ON u.id = p.user_id;
+
+SELECT
+    id,
+    document_number
+FROM piedrazul.patients;
+
+INSERT INTO piedrazul.appointments
+    (
+        patient_id,
+        professional_id,
+        appointment_date,
+        start_time,
+        end_time,
+        status
+    )
+VALUES
+    (
+        1,
+        1,
+        '2026-09-21',
+        '09:00',
+        '09:30',
+        'SCHEDULED'
+    );
+
+-- Selects
+SELECT * FROM piedrazul.roles;
+SELECT * FROM piedrazul.users;
+SELECT * FROM piedrazul.user_roles;
+SELECT * FROM piedrazul.specialties;
+SELECT * FROM piedrazul.professionals;
+SELECT * FROM piedrazul.patients;
+SELECT * FROM piedrazul.system_settings;
+SELECT * FROM piedrazul.weekly_availability;
+SELECT * FROM piedrazul.appointments;
+
+-- Volver al usuario de bootstrap
+RESET ROLE;

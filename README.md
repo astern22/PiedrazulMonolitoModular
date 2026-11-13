@@ -1,5 +1,9 @@
 # Piedrazul
 
+![Java](https://img.shields.io/badge/java-%23ED8B00.svg?style=for-the-badge&logo=openjdk&logoColor=white)
+![Spring](https://img.shields.io/badge/spring-%236DB33F.svg?style=for-the-badge&logo=spring&logoColor=white)
+![Vue.js](https://img.shields.io/badge/vue.js-%2335495e.svg?style=for-the-badge&logo=vuedotjs&logoColor=%234FC08D)
+
 Sistema web para gestionar pacientes, profesionales, especialidades, disponibilidad y citas médicas. El proyecto está organizado como un monolito modular, con API REST y control de acceso por roles.
 
 ## Tecnologías
@@ -9,44 +13,38 @@ Sistema web para gestionar pacientes, profesionales, especialidades, disponibili
 
 ## Requisitos
 
-Instala Java 21, Node.js, PostgreSQL y npm. Antes de iniciar la aplicación, configura PostgreSQL con la base de datos y el esquema que espera el backend (`piedrazuldb` y `piedrazul`) y revisa las credenciales en `src/main/resources/application.properties`.
-
-> Los scripts de `DB/` pueden borrar y recrear bases de datos o esquemas. Revísalos y respalda los datos antes de ejecutarlos.
+Descargar Docker Desktop y los servicios de Docker CLI.
 
 ## Ejecución local
 
-Desde la raíz del proyecto, inicia el backend:
+Desde la raíz del proyecto, construir los contenedores de Docker:
 
-```powershell
-.\mvnw.cmd spring-boot:run
+```bash
+docker compose build --no-cache
 ```
 
-En otra terminal, inicia el frontend:
+Despues de crear los contenedores, hay que ejecutarlos:
 
-```powershell
-cd frontend
-npm install
-npm run dev
+```bash
+docker compose up -d
 ```
 
-Abre la URL que indique Vite (por defecto `http://localhost:5173`). La API corre en `http://localhost:8080`; en desarrollo, Vite redirige las solicitudes `/api` y `/auth` al backend.
+Para apagarlo:
 
-Para ejecutar las pruebas del backend desde la raíz:
-
-```powershell
-.\mvnw.cmd test
+```bash
+docker compose down -v
 ```
 
-Para generar el frontend de producción:
+Para remover por completo el proyecto:
 
-```powershell
-cd frontend
-npm run build
+```bash
+docker compose down --rmi all
 ```
 
-## Documentación
+## Puertos
 
-- [Documento de requisitos IEEE 830](docs/ERS_PiedraAzul_IEEE830_2026-II_FINAL.docx)
-- [Documento de arquitectura](docs/Documento-Piedra-azul-documento-arquitectura_corte1.docx)
-- [Diagramas de arquitectura C4](docs/c4/README.md)
-- [Historias de usuario](docs/epicas/)
+- La API del backend se ejecuta en `http://localhost:8080/api`.
+
+- La aplicacion web se ejecuta en `http://localhost:3000`.
+
+- La base de datos de postgres se ejecuta en `http://localhost:5432`.
