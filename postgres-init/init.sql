@@ -1,5 +1,6 @@
 -- PiedrazulDB ver6 init
 
+
 -- Eliminar tablas
 DROP TABLE IF EXISTS piedrazul.appointments CASCADE;
 DROP TABLE IF EXISTS piedrazul.weekly_availability CASCADE;
@@ -11,24 +12,16 @@ DROP TABLE IF EXISTS piedrazul.user_roles CASCADE;
 DROP TABLE IF EXISTS piedrazul.users CASCADE;
 DROP TABLE IF EXISTS piedrazul.roles CASCADE;
 
--- Limpiar tablas
-TRUNCATE TABLE piedrazul.appointments RESTART IDENTITY CASCADE;
-TRUNCATE TABLE piedrazul.weekly_availability RESTART IDENTITY CASCADE;
-TRUNCATE TABLE piedrazul.system_settings RESTART IDENTITY CASCADE;
-TRUNCATE TABLE piedrazul.patients RESTART IDENTITY CASCADE;
-TRUNCATE TABLE piedrazul.professionals RESTART IDENTITY CASCADE;
-TRUNCATE TABLE piedrazul.specialties RESTART IDENTITY CASCADE;
-TRUNCATE TABLE piedrazul.user_roles RESTART IDENTITY CASCADE;
-TRUNCATE TABLE piedrazul.users RESTART IDENTITY CASCADE;
-TRUNCATE TABLE piedrazul.roles RESTART IDENTITY CASCADE;
-
 -- Eliminar
 DROP DATABASE IF EXISTS piedrazulDB;
 DROP SCHEMA IF EXISTS piedrazul CASCADE;
 DROP ROLE IF EXISTS piedrazul_admin;
 
 -- Crear rol propietario
-CREATE ROLE piedrazul_admin LOGIN PASSWORD 'Piedrazul123.'CREATEDB;
+CREATE ROLE piedrazul_admin
+WITH LOGIN PASSWORD 'Piedrazul123.';
+
+CREATE SCHEMA IF NOT EXISTS piedrazul AUTHORIZATION piedrazul_admin;
 
 GRANT USAGE ON SCHEMA piedrazul TO piedrazul_admin;
 
@@ -40,7 +33,6 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA piedrazul TO piedrazul_admin;
 CREATE DATABASE piedrazulDB WITH ENCODING = 'UTF8';
 
 -- Crear schema
-CREATE SCHEMA IF NOT EXISTS piedrazul AUTHORIZATION piedrazul_admin;
 
 SET search_path TO piedrazul;
 
