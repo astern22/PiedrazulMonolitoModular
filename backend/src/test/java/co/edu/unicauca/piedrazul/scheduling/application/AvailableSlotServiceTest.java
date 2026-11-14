@@ -176,4 +176,30 @@ class AvailableSlotServiceTest {
         assertEquals(LocalTime.of(8, 0), slots.get(0).startTime());
         assertEquals(LocalTime.of(11, 30), slots.get(7).startTime());
     }
+
+    @Test
+    void testGetAvailableSlots_WhenAppointmentIsCancelled_SlotIsFreedAndAvailable() {
+        LocalDate monday = LocalDate.of(2026, 10, 12);
+        WeeklyAvailabilityEntity availability = new WeeklyAvailabilityEntity();
+        availability.setId(1L);
+        availability.setProfessionalId(10L);
+        availability.setDayOfWeek(1);
+        availability.setStartTime(LocalTime.of(8, 0));
+        availability.setEndTime(LocalTime.of(10, 0));
+        availability.setActive(true);
+
+        when(professionalRepository.findById(10L)).thenReturn(Optional.of(professional));
+        when(availabilityRepository.findByProfessionalIdAndDayOfWeek(10L, 1))
+                .thenReturn(List.of(availability));
+
+        when(appointmentService.findAppointments(10L, monday))
+                .thenReturn(Collections.emptyList());
+
+        List<AvailableSlotResponse> slots = service.getAvailableSlots(10L, monday);
+
+        assertNotNull(slots);
+        assertEquals(4, slots.size());
+        assertTrue(slots.stream().anyMatch(s -> s.startTime().equals(LocalTime.of(8, 30))
+                && s.endTime().equals(LocalTime.of(9, 0))));
+    }
 }

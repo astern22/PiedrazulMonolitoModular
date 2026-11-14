@@ -155,6 +155,8 @@ CREATE TABLE appointments (
 
     status VARCHAR(20) NOT NULL,
 
+    cancellation_reason VARCHAR(255),
+
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_appointment_patient
@@ -166,13 +168,14 @@ CREATE TABLE appointments (
         REFERENCES professionals(id)
 );
 
--- Evita doble reserva del mismo profesional
+-- Evita doble reserva del mismo profesional en citas activas
 CREATE UNIQUE INDEX uk_professional_slot
 ON appointments (
     professional_id,
     appointment_date,
     start_time
-);
+)
+WHERE status NOT IN ('CANCELLED', 'CANCELED', 'CANCELADA');
 
 -- Inserciones
 INSERT INTO specialties (name)

@@ -66,8 +66,7 @@ class AppointmentServiceTest {
                 20L,
                 futureDate,
                 LocalTime.of(9, 0),
-                LocalTime.of(10, 0)
-        );
+                LocalTime.of(10, 0));
 
         when(repository.save(any(AppointmentEntity.class))).thenAnswer(invocation -> {
             AppointmentEntity entity = invocation.getArgument(0);
@@ -346,7 +345,8 @@ class AppointmentServiceTest {
     @Test
     void testCA1_GetAppointmentHistory_SuccessWithRecords() {
         String doc = "1061789234";
-        PatientResponse patient = new PatientResponse(10L, 2L, doc, "3001234567", LocalDate.of(1995, 5, 20), "Carlos Gomez", "carlos@mail.com");
+        PatientResponse patient = new PatientResponse(10L, 2L, doc, "3001234567", LocalDate.of(1995, 5, 20),
+                "Carlos Gomez", "carlos@mail.com");
         when(patientService.findOptionalByDocumentNumber(doc)).thenReturn(Optional.of(patient));
 
         AppointmentEntity apt1 = new AppointmentEntity();
@@ -386,7 +386,8 @@ class AppointmentServiceTest {
     @Test
     void testCA2_GetAppointmentHistory_PatientWithoutAppointments() {
         String doc = "1061789234";
-        PatientResponse patient = new PatientResponse(10L, 2L, doc, "3001234567", LocalDate.of(1995, 5, 20), "Carlos Gomez", "carlos@mail.com");
+        PatientResponse patient = new PatientResponse(10L, 2L, doc, "3001234567", LocalDate.of(1995, 5, 20),
+                "Carlos Gomez", "carlos@mail.com");
         when(patientService.findOptionalByDocumentNumber(doc)).thenReturn(Optional.of(patient));
         when(repository.findByPatientIdOrderByAppointmentDateDescStartTimeDesc(10L))
                 .thenReturn(Collections.emptyList());
@@ -403,8 +404,8 @@ class AppointmentServiceTest {
         String doc = "9999999999";
         when(patientService.findOptionalByDocumentNumber(doc)).thenReturn(Optional.empty());
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                service.getAppointmentHistoryByDocument(doc));
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> service.getAppointmentHistoryByDocument(doc));
         assertEquals(404, ex.getStatusCode().value());
         assertTrue(ex.getReason().contains("No se encontró ningún paciente registrado con la cédula ingresada"));
     }
@@ -416,5 +417,85 @@ class AppointmentServiceTest {
         assertThrows(IllegalArgumentException.class, () -> service.getAppointmentHistoryByDocument("   "));
         assertThrows(IllegalArgumentException.class, () -> service.getAppointmentHistoryByDocument("123ABC456"));
         assertThrows(IllegalArgumentException.class, () -> service.getAppointmentHistoryByDocument("123-456"));
+    }
+
+    // ==========================================
+    // E3-HU03: Cancelación de citas por paciente
+    // ==========================================
+
+    @Test
+    void testCancelAppointment_SuccessWithReason() {
+        LocalDate futureDate = LocalDate.now().plusDays(5);
+        sampleEntity.setAppointmentDate(futureDate);
+        sampleEntity.setStatus("SCHEDULED");
+
+        when(repository.save(any(AppointmentEntity.class))).thenAnswer(i -> i.getArgument(0));
+
+        AppointmentEntity cancelled = service.cancelAppointment(sampleEntity, "Problema personal de fuerza mayor");
+
+        assertNotNull(cancelled);
+        assertEquals("CANCELLED", cancelled.getStatus());
+        assertEquals("Problema personal de fuerza mayor", cancelled.getCancellationReason());
+        verify(repository).save(sampleEntity);
+    }
+
+    @Test
+    void testCancelAppointment_MissingReason_ThrowsException() {
+        LocalDate futureDate = LocalDate.now().plusDays(5);
+        sampleEntity.setAppointmentDate(futureDate);
+
+        IllegalArgumentException ex1 = assertThrows(IllegalArgumentException.class,
+                () -> service.cancelAppointment(sampleEntity, null));
+        assertEquals("El motivo de la cancelación es obligatorio.", ex1.getMessage());
+
+        IllegalArgumentException ex2 = assertThrows(IllegalArgumentException.class,
+                () -> service.cancelAppointment(sampleEntity, "   "));
+        assertEquals("El motivo de la cancelación es obligatorio.", ex2.getMessage());
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void testCancelAppointment_AlreadyCancelled_ThrowsException() {
+        LocalDate futureDate = LocalDate.now().plusDays(5);
+        sampleEntity.setAppointmentDate(futureDate);
+        sampleEntity.setStatus("CANCELLED");
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.cancelAppointment(sampleEntity, "Nuevo motivo"));
+        assertEquals("La cita ya se encuentra cancelada.", ex.getMessage());
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void testCancelAppointment_LessThanTwoDays_ThrowsException() {
+        sampleEntity.setAppointmentDate(LocalDate.now().plusDays(1));
+        sampleEntity.setStatus("SCHEDULED");
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.cancelAppointment(sampleEntity, "No podré asistir"));
+        assertEquals("La cita no puede cancelarse con menos de dos dias de anticipación.", ex.getMessage());
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void testCancelAppointment_FreesSlotInFindAppointments() {
+        LocalDate futureDate = LocalDate.now().plusDays(5);
+        sampleEntity.setAppointmentDate(futureDate);
+        sampleEntity.setStatus("SCHEDULED");
+
+        when(repository.findByProfessionalIdAndAppointmentDate(20L, futureDate))
+                .thenReturn(List.of(sampleEntity));
+
+        List<AppointmentEntity> activeSlots = service.findAppointments(20L, futureDate);
+        assertEquals(1, activeSlots.size());
+
+        when(repository.save(any(AppointmentEntity.class))).thenAnswer(i -> i.getArgument(0));
+        service.cancelAppointment(sampleEntity, "Calamidad doméstica");
+
+        List<AppointmentEntity> freedSlots = service.findAppointments(20L, futureDate);
+        assertTrue(freedSlots.isEmpty(), "La cita cancelada no debe ocupar la franja horaria");
     }
 }

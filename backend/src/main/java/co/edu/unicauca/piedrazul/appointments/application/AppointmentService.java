@@ -9,12 +9,20 @@ import co.edu.unicauca.piedrazul.patients.application.PatientService;
 import co.edu.unicauca.piedrazul.patients.presentation.dto.PatientResponse;
 import co.edu.unicauca.piedrazul.professionals.application.ProfessionalService;
 import co.edu.unicauca.piedrazul.professionals.infrastructure.persistence.ProfessionalEntity;
+
+import org.springframework.cglib.core.Local;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import org.slf4j.*;
+
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -42,14 +50,13 @@ public class AppointmentService {
     public AppointmentEntity createAppointment(CreateAppointmentCommand command) {
 
         if (command.appointmentDate().isBefore(java.time.LocalDate.now())) {
-        throw new IllegalArgumentException(
-            "No se puede agendar una cita en una fecha anterior a hoy.");
+            throw new IllegalArgumentException(
+                    "No se puede agendar una cita en una fecha anterior a hoy.");
         }
 
         validateSlotAvailable(command);
 
-        AppointmentEntity appointment =
-                new AppointmentEntity();
+        AppointmentEntity appointment = new AppointmentEntity();
 
         appointment.setPatientId(
                 command.patientId());
@@ -71,7 +78,8 @@ public class AppointmentService {
         try {
             return repository.save(appointment);
         } catch (DataIntegrityViolationException e) {
-            // Dos reservas simultaneas: el indice unico uk_professional_slot rechaza la segunda
+            // Dos reservas simultaneas: el indice unico uk_professional_slot rechaza la
+            // segunda
             throw slotUnavailable();
         }
     }
@@ -85,9 +93,8 @@ public class AppointmentService {
                 .findByProfessionalIdAndAppointmentDate(command.professionalId(), command.appointmentDate())
                 .stream()
                 .filter(existing -> !isCancelled(existing))
-                .anyMatch(existing ->
-                        command.startTime().isBefore(existing.getEndTime())
-                                && command.endTime().isAfter(existing.getStartTime()));
+                .anyMatch(existing -> command.startTime().isBefore(existing.getEndTime())
+                        && command.endTime().isAfter(existing.getStartTime()));
 
         if (overlaps) {
             throw slotUnavailable();
@@ -95,12 +102,16 @@ public class AppointmentService {
     }
 
     private boolean isCancelled(AppointmentEntity appointment) {
-        return "CANCELLED".equals(appointment.getStatus())
-                || "CANCELADA".equals(appointment.getStatus());
+        if (appointment == null || appointment.getStatus() == null) {
+            return false;
+        }
+        String status = appointment.getStatus().toUpperCase();
+        return "CANCELLED".equals(status) || "CANCELED".equals(status) || "CANCELADA".equals(status);
     }
 
     private ResponseStatusException slotUnavailable() {
-        return new ResponseStatusException(HttpStatus.CONFLICT, "El horario ya no está disponible. Por favor selecciona otra franja.");
+        return new ResponseStatusException(HttpStatus.CONFLICT,
+                "El horario ya no está disponible. Por favor selecciona otra franja.");
     }
 
     public AppointmentEntity getAppointmentById(Long id) {
@@ -140,12 +151,13 @@ public class AppointmentService {
         }
         // Resultados ordenados por fecha y hora de inicio
         return found.stream()
+                .filter(appointment -> !isCancelled(appointment))
                 .sorted(java.util.Comparator
                         .comparing(AppointmentEntity::getAppointmentDate)
                         .thenComparing(AppointmentEntity::getStartTime))
                 .toList();
     }
-    
+
     public List<AppointmentEntity> getAppointmentsByPatientId(Long patientId) {
         return repository.findByPatientId(patientId);
     }
@@ -173,7 +185,8 @@ public class AppointmentService {
     }
 
     /**
-     * Consulta el historial cronologico completo de citas de un paciente por su cedula.
+     * Consulta el historial cronologico completo de citas de un paciente por su
+     * cedula.
      * Roles permitidos: ADMIN, SCHEDULER, PROFESSIONAL (Medico/Terapista).
      */
     public PatientAppointmentHistoryResponse getAppointmentHistoryByDocument(String documentNumber) {
@@ -184,8 +197,7 @@ public class AppointmentService {
         PatientResponse patient = patientService.findOptionalByDocumentNumber(documentNumber.trim())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
-                        "No se encontró ningún paciente registrado con la cédula ingresada"
-                ));
+                        "No se encontró ningún paciente registrado con la cédula ingresada"));
 
         List<AppointmentEntity> appointments = repository
                 .findByPatientIdOrderByAppointmentDateDescStartTimeDesc(patient.id());
@@ -241,10 +253,43 @@ public class AppointmentService {
                     a.getEndTime(),
                     profName,
                     specName,
-                    a.getStatus()
-            );
+                    a.getStatus());
         }).toList();
 
         return new PatientAppointmentHistoryResponse(patient, items);
+    }
+
+    public AppointmentEntity cancelAppointment(
+            AppointmentEntity appointment,
+            String cancellationReason) {
+
+        if (cancellationReason == null || cancellationReason.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "El motivo de la cancelación es obligatorio.");
+        }
+
+        if (isCancelled(appointment)) {
+            throw new IllegalArgumentException(
+                    "La cita ya se encuentra cancelada.");
+        }
+
+        long diasRestantes = ChronoUnit.DAYS.between(
+                LocalDate.now(),
+                appointment.getAppointmentDate());
+
+        if (diasRestantes < 2) {
+            throw new IllegalArgumentException(
+                    "La cita no puede cancelarse con menos de dos dias de anticipación.");
+        }
+
+        appointment.setStatus("CANCELLED");
+        appointment.setCancellationReason(cancellationReason.trim());
+
+        return repository.save(appointment);
+    }
+
+    public AppointmentEntity cancelAppointment(
+            AppointmentEntity appointment) {
+        return cancelAppointment(appointment, null);
     }
 }

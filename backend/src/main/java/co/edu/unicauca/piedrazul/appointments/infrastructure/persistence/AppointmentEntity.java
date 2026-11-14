@@ -44,6 +44,9 @@ public class AppointmentEntity {
     @Column(name = "status", length = 20)
     private String status;
 
+    @Column(name = "cancellation_reason")
+    private String cancellationReason;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -111,6 +114,14 @@ public class AppointmentEntity {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getCancellationReason() {
+        return cancellationReason;
+    }
+
+    public void setCancellationReason(String cancellationReason) {
+        this.cancellationReason = cancellationReason;
     }
 
     public LocalDateTime getCreatedAt() {

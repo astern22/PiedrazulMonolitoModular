@@ -92,6 +92,14 @@ export const appointmentService = {
     return response.data
   },
 
+  async cancel(id, reason) {
+    const response = await apiClient.delete(`/api/appointments/me/cancel/${id}`, {
+      data: { reason },
+      params: { reason },
+    })
+    return response.data
+  },
+
   /**
    * Citas del paciente autenticado. El backend las resuelve desde el token,
    * por lo que un paciente nunca puede ver citas de otros.
