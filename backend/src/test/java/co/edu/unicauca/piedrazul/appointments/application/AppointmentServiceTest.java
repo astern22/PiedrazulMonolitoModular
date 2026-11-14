@@ -311,7 +311,7 @@ class AppointmentServiceTest {
         when(patientService.findByCurrentUser("ana")).thenReturn(patient);
         when(repository.findByPatientId(10L)).thenReturn(List.of(sampleEntity));
 
-        List<AppointmentEntity> result = service.getAppointmentsByProfessionalDate("ana", null, null);
+        List<AppointmentEntity> result = service.getAppointmentsByUsername("ana", null, null);
 
         assertEquals(1, result.size());
         assertEquals(10L, result.getFirst().getPatientId());
@@ -325,9 +325,9 @@ class AppointmentServiceTest {
         when(patientService.findByCurrentUser("ana")).thenReturn(patient);
         when(repository.findByPatientId(10L)).thenReturn(List.of(sampleEntity));
 
-        assertEquals(1, service.getAppointmentsByProfessionalDate("ana", 20L, LocalDate.of(2026, 10, 15)).size());
-        assertTrue(service.getAppointmentsByProfessionalDate("ana", 99L, null).isEmpty());
-        assertTrue(service.getAppointmentsByProfessionalDate("ana", null, LocalDate.of(2026, 1, 1)).isEmpty());
+        assertEquals(1, service.getAppointmentsByUsername("ana", 20L, LocalDate.of(2026, 10, 15)).size());
+        assertTrue(service.getAppointmentsByUsername("ana", 99L, null).isEmpty());
+        assertTrue(service.getAppointmentsByUsername("ana", null, LocalDate.of(2026, 1, 1)).isEmpty());
     }
 
     @Test

@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -323,7 +324,7 @@ class AppointmentControllerTest {
                 AppointmentEntity entity = new AppointmentEntity();
                 entity.setId(1L);
                 entity.setPatientId(10L);
-                when(appointmentService.getAppointmentsByProfessionalDate("ana", null, null))
+                when(appointmentService.getAppointmentsByUsername("ana", null, null))
                                 .thenReturn(List.of(entity));
 
                 var auth = new UsernamePasswordAuthenticationToken("ana", null,
