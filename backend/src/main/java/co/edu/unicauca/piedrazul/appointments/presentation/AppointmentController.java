@@ -146,7 +146,7 @@ public class AppointmentController {
                 .anyMatch(a -> "ROLE_PATIENT".equals(a.getAuthority()));
     }
 
-    @PutMapping("/me/cancel/{id}")
+    @DeleteMapping("/me/cancel/{id}")
     public ResponseEntity<AppointmentEntity> cancelAppointmentById(@PathVariable Long id, Authentication auth) {
         AppointmentEntity existingAppointment = service.getAppointmentById(id);
 

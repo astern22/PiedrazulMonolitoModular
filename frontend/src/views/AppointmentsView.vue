@@ -561,6 +561,22 @@ async function handleDelete(id) {
   }
 }
 
+async function handleCancel(id) {
+  if (!confirm(`¿Estas seguro de que deseas cancelar la cita #${id}?`)) {
+    return;
+  }
+
+  errorMessage.value = "";
+  successMessage.value = "";
+  try {
+    await appointmentService.cancel(id);
+    successMessage.value = `Cita #${id} cancelada exitosamente.`;
+    await fetchAppointments();
+  } catch (error) {
+    errorMessage.value = error.message || `No se pudo cancelar la cita #${id}.`;
+  }
+}
+
 onMounted(async () => {
   loadProfessionals();
 
@@ -950,7 +966,7 @@ onMounted(async () => {
     </div>
 
     <!-- Barra de busqueda y filtros -->
-    <div class="card filter-card">
+    <div class="card filter-card" v-if="!isPatient"> 
       <h4>Filtrar Citas por Profesional o Fecha</h4>
       <form @submit.prevent="handleSearch" class="filter-form">
         <div class="form-group">
@@ -1057,6 +1073,8 @@ onMounted(async () => {
                   {{ item.status }}
                 </span>
               </td>
+    <!-- TODO -->
+
               <td style="text-align: right">
                 <button
                   v-if="canManage"
@@ -1065,6 +1083,14 @@ onMounted(async () => {
                   title="Cancelar Cita"
                 >
                   Cancelar
+                </button>
+                <button
+                  v-else-if="isPatient"
+                  @click="handleCancel(item.id)"
+                  class="btn-danger-sm"
+                  title="Cancelar Cita"
+                >
+                  Cancelar mi cita
                 </button>
                 <span v-else class="text-muted-xs">—</span>
               </td>
