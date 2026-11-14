@@ -92,8 +92,11 @@ export const appointmentService = {
     return response.data
   },
 
-  async cancel(id) {
-    const response = await apiClient.delete(`/api/appointments/me/cancel/${id}`)
+  async cancel(id, reason) {
+    const response = await apiClient.delete(`/api/appointments/me/cancel/${id}`, {
+      data: { reason },
+      params: { reason },
+    })
     return response.data
   },
 

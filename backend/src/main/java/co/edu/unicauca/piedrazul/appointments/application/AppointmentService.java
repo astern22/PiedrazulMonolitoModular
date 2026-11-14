@@ -102,8 +102,11 @@ public class AppointmentService {
     }
 
     private boolean isCancelled(AppointmentEntity appointment) {
-        return "CANCELLED".equals(appointment.getStatus())
-                || "CANCELADA".equals(appointment.getStatus());
+        if (appointment == null || appointment.getStatus() == null) {
+            return false;
+        }
+        String status = appointment.getStatus().toUpperCase();
+        return "CANCELLED".equals(status) || "CANCELED".equals(status) || "CANCELADA".equals(status);
     }
 
     private ResponseStatusException slotUnavailable() {
@@ -148,6 +151,7 @@ public class AppointmentService {
         }
         // Resultados ordenados por fecha y hora de inicio
         return found.stream()
+                .filter(appointment -> !isCancelled(appointment))
                 .sorted(java.util.Comparator
                         .comparing(AppointmentEntity::getAppointmentDate)
                         .thenComparing(AppointmentEntity::getStartTime))
@@ -255,21 +259,37 @@ public class AppointmentService {
         return new PatientAppointmentHistoryResponse(patient, items);
     }
 
-    public AppointmentEntity cancelAppointment(AppointmentEntity appointment) {
+    public AppointmentEntity cancelAppointment(
+            AppointmentEntity appointment,
+            String cancellationReason) {
 
-        LocalDate actualDate = LocalDate.now();
-        LocalDate appointmentDate = appointment.getAppointmentDate();
+        if (cancellationReason == null || cancellationReason.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "El motivo de la cancelación es obligatorio.");
+        }
+
+        if (isCancelled(appointment)) {
+            throw new IllegalArgumentException(
+                    "La cita ya se encuentra cancelada.");
+        }
 
         long diasRestantes = ChronoUnit.DAYS.between(
-                actualDate,
-                appointmentDate);
+                LocalDate.now(),
+                appointment.getAppointmentDate());
 
-        if (diasRestantes > 2) {
-            appointment.setStatus("CANCELED");
-            return repository.save(appointment);
-        } else {
+        if (diasRestantes < 2) {
             throw new IllegalArgumentException(
-                    "La fecha de la cita es próxima a dos días.");
+                    "La cita no puede cancelarse con menos de dos dias de anticipación.");
         }
+
+        appointment.setStatus("CANCELLED");
+        appointment.setCancellationReason(cancellationReason.trim());
+
+        return repository.save(appointment);
+    }
+
+    public AppointmentEntity cancelAppointment(
+            AppointmentEntity appointment) {
+        return cancelAppointment(appointment, null);
     }
 }

@@ -2,12 +2,14 @@ package co.edu.unicauca.piedrazul.appointments.presentation;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 import co.edu.unicauca.piedrazul.appointments.application.AppointmentService;
 import co.edu.unicauca.piedrazul.appointments.infrastructure.persistence.AppointmentEntity;
 import co.edu.unicauca.piedrazul.appointments.presentation.command.CreateAppointmentCommand;
 import co.edu.unicauca.piedrazul.appointments.presentation.dto.AppointmentRequest;
 import co.edu.unicauca.piedrazul.appointments.presentation.dto.AppointmentResponse;
+import co.edu.unicauca.piedrazul.appointments.presentation.dto.CancelAppointmentRequest;
 import co.edu.unicauca.piedrazul.appointments.presentation.dto.PatientAppointmentHistoryResponse;
 
 import org.springframework.http.HttpStatus;
@@ -146,26 +148,51 @@ public class AppointmentController {
                 .anyMatch(a -> "ROLE_PATIENT".equals(a.getAuthority()));
     }
 
-    @DeleteMapping("/me/cancel/{id}")
-    public ResponseEntity<AppointmentEntity> cancelAppointmentById(@PathVariable Long id, Authentication auth) {
+    @RequestMapping(value = "/me/cancel/{id}", method = {RequestMethod.DELETE, RequestMethod.POST, RequestMethod.PUT})
+    public ResponseEntity<?> cancelAppointmentById(
+            @PathVariable Long id,
+            @RequestBody(required = false) CancelAppointmentRequest body,
+            @RequestParam(value = "reason", required = false) String reasonParam,
+            @RequestParam(value = "motivo", required = false) String motivoParam,
+            Authentication auth) {
+
+        String reason = null;
+        if (body != null && body.getReason() != null && !body.getReason().trim().isEmpty()) {
+            reason = body.getReason().trim();
+        } else if (reasonParam != null && !reasonParam.trim().isEmpty()) {
+            reason = reasonParam.trim();
+        } else if (motivoParam != null && !motivoParam.trim().isEmpty()) {
+            reason = motivoParam.trim();
+        }
+
+        if (reason == null || reason.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "El motivo de la cancelación es obligatorio."));
+        }
+
         AppointmentEntity existingAppointment = service.getAppointmentById(id);
 
-        String username = auth.getName();
+        if (existingAppointment == null) {
+            return ResponseEntity.notFound().build();
+        }
 
+        String username = auth.getName();
         Long patId = service.getPatientIdByUsername(username);
 
         if (patId == null ||
                 !existingAppointment.getPatientId().equals(patId)) {
-            return ResponseEntity.status(403).build();
+            return ResponseEntity.status(403)
+                    .body(Map.of("message", "No tienes permiso para cancelar esta cita."));
         }
 
         try {
-            AppointmentEntity app = service.cancelAppointment(existingAppointment);
+            AppointmentEntity app = service.cancelAppointment(existingAppointment, reason);
 
             return ResponseEntity.ok(app);
 
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", e.getMessage()));
         }
     }
 }

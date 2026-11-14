@@ -42,7 +42,7 @@ public class SecurityConfig {
                         .hasRole("PATIENT")
                         .requestMatchers(HttpMethod.POST, "/api/appointments/create")
                         .hasAnyRole("PATIENT", "ADMIN", "SCHEDULER")
-                        .requestMatchers(HttpMethod.DELETE, "/api/appointments/me/cancel/*")
+                        .requestMatchers("/api/appointments/me/cancel/*")
                         .hasRole("PATIENT")
                         // Modificar o cancelar citas: solo administracion / agendadores
                         .requestMatchers(HttpMethod.PUT, "/api/appointments/**")

@@ -431,4 +431,127 @@ class AppointmentControllerTest {
                                 .andExpect(jsonPath("$.message").value(
                                                 "El campo es obligatorio y solo acepta caracteres numéricos válidos."));
         }
+
+        // ==========================================
+        // E3-HU03: Cancelación de citas por paciente
+        // ==========================================
+
+        @Test
+        void testCancelAppointmentById_SuccessWithBody() throws Exception {
+                AppointmentEntity entity = new AppointmentEntity();
+                entity.setId(5L);
+                entity.setPatientId(10L);
+                entity.setStatus("SCHEDULED");
+
+                AppointmentEntity cancelled = new AppointmentEntity();
+                cancelled.setId(5L);
+                cancelled.setPatientId(10L);
+                cancelled.setStatus("CANCELLED");
+                cancelled.setCancellationReason("Motivo de salud");
+
+                when(appointmentService.getAppointmentById(5L)).thenReturn(entity);
+                when(appointmentService.getPatientIdByUsername("ana")).thenReturn(10L);
+                when(appointmentService.cancelAppointment(entity, "Motivo de salud")).thenReturn(cancelled);
+
+                var auth = new UsernamePasswordAuthenticationToken("ana", null,
+                                List.of(new SimpleGrantedAuthority("ROLE_PATIENT")));
+
+                String json = """
+                                {"reason": "Motivo de salud"}
+                                """;
+
+                mockMvc.perform(delete("/api/appointments/me/cancel/5")
+                                .principal(auth)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(json))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.id").value(5L))
+                                .andExpect(jsonPath("$.status").value("CANCELLED"))
+                                .andExpect(jsonPath("$.cancellationReason").value("Motivo de salud"));
+        }
+
+        @Test
+        void testCancelAppointmentById_SuccessWithParam() throws Exception {
+                AppointmentEntity entity = new AppointmentEntity();
+                entity.setId(5L);
+                entity.setPatientId(10L);
+                entity.setStatus("SCHEDULED");
+
+                AppointmentEntity cancelled = new AppointmentEntity();
+                cancelled.setId(5L);
+                cancelled.setPatientId(10L);
+                cancelled.setStatus("CANCELLED");
+                cancelled.setCancellationReason("Viaje imprevisto");
+
+                when(appointmentService.getAppointmentById(5L)).thenReturn(entity);
+                when(appointmentService.getPatientIdByUsername("ana")).thenReturn(10L);
+                when(appointmentService.cancelAppointment(entity, "Viaje imprevisto")).thenReturn(cancelled);
+
+                var auth = new UsernamePasswordAuthenticationToken("ana", null,
+                                List.of(new SimpleGrantedAuthority("ROLE_PATIENT")));
+
+                mockMvc.perform(delete("/api/appointments/me/cancel/5")
+                                .principal(auth)
+                                .param("reason", "Viaje imprevisto"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.status").value("CANCELLED"))
+                                .andExpect(jsonPath("$.cancellationReason").value("Viaje imprevisto"));
+        }
+
+        @Test
+        void testCancelAppointmentById_MissingReason_ReturnsBadRequest() throws Exception {
+                var auth = new UsernamePasswordAuthenticationToken("ana", null,
+                                List.of(new SimpleGrantedAuthority("ROLE_PATIENT")));
+
+                mockMvc.perform(delete("/api/appointments/me/cancel/5")
+                                .principal(auth))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.message").value("El motivo de la cancelación es obligatorio."));
+
+                verify(appointmentService, never()).cancelAppointment(any(), any());
+        }
+
+        @Test
+        void testCancelAppointmentById_NotOwner_ReturnsForbidden() throws Exception {
+                AppointmentEntity entity = new AppointmentEntity();
+                entity.setId(5L);
+                entity.setPatientId(99L);
+
+                when(appointmentService.getAppointmentById(5L)).thenReturn(entity);
+                when(appointmentService.getPatientIdByUsername("ana")).thenReturn(10L);
+
+                var auth = new UsernamePasswordAuthenticationToken("ana", null,
+                                List.of(new SimpleGrantedAuthority("ROLE_PATIENT")));
+
+                String json = """
+                                {"reason": "Motivo cualquiera"}
+                                """;
+
+                mockMvc.perform(delete("/api/appointments/me/cancel/5")
+                                .principal(auth)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(json))
+                                .andExpect(status().isForbidden())
+                                .andExpect(jsonPath("$.message").value("No tienes permiso para cancelar esta cita."));
+
+                verify(appointmentService, never()).cancelAppointment(any(), any());
+        }
+
+        @Test
+        void testCancelAppointmentById_NotFound_ReturnsNotFound() throws Exception {
+                when(appointmentService.getAppointmentById(999L)).thenReturn(null);
+
+                var auth = new UsernamePasswordAuthenticationToken("ana", null,
+                                List.of(new SimpleGrantedAuthority("ROLE_PATIENT")));
+
+                String json = """
+                                {"reason": "Motivo cualquiera"}
+                                """;
+
+                mockMvc.perform(delete("/api/appointments/me/cancel/999")
+                                .principal(auth)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(json))
+                                .andExpect(status().isNotFound());
+        }
 }

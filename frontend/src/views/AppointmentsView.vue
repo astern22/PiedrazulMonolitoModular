@@ -140,7 +140,12 @@ function getStatusBadgeClass(status) {
   if (s === "SCHEDULED" || s === "PROGRAMADA") return "status-scheduled";
   if (s === "COMPLETED" || s === "COMPLETADA" || s === "ATENDIDA")
     return "status-completed";
-  if (s === "CANCELLED" || s === "CANCELADA" || s === "INASISTENCIA")
+  if (
+    s === "CANCELLED" ||
+    s === "CANCELED" ||
+    s === "CANCELADA" ||
+    s === "INASISTENCIA"
+  )
     return "status-cancelled";
   return "status-scheduled";
 }
@@ -149,8 +154,14 @@ function formatStatus(status) {
   const s = String(status || "").toUpperCase();
   if (s === "SCHEDULED") return "PROGRAMADA";
   if (s === "COMPLETED") return "ATENDIDA";
-  if (s === "CANCELLED") return "CANCELADA";
+  if (s === "CANCELLED" || s === "CANCELED" || s === "CANCELADA")
+    return "CANCELADA";
   return status;
+}
+
+function isAppointmentCancelled(status) {
+  const s = String(status || "").toUpperCase();
+  return s === "CANCELLED" || s === "CANCELED" || s === "CANCELADA";
 }
 
 // Franjas de horario disponibles
@@ -561,19 +572,75 @@ async function handleDelete(id) {
   }
 }
 
-async function handleCancel(id) {
-  if (!confirm(`¿Estas seguro de que deseas cancelar la cita #${id}?`)) {
+// Estado modal de cancelacion (paciente)
+const showCancelModal = ref(false);
+const cancellingAppointment = ref(null);
+const cancellationReason = ref("");
+const cancelError = ref("");
+const isCancelling = ref(false);
+
+function openCancelModal(item) {
+  cancellingAppointment.value = item;
+  cancellationReason.value = "";
+  cancelError.value = "";
+  showCancelModal.value = true;
+}
+
+function closeCancelModal() {
+  if (isCancelling.value) return;
+  showCancelModal.value = false;
+  cancellingAppointment.value = null;
+  cancellationReason.value = "";
+  cancelError.value = "";
+}
+
+async function confirmCancelAppointment() {
+  const reason = cancellationReason.value.trim();
+  if (!reason) {
+    cancelError.value = "El motivo de la cancelación es obligatorio.";
     return;
   }
 
+  isCancelling.value = true;
+  cancelError.value = "";
   errorMessage.value = "";
   successMessage.value = "";
+
   try {
-    await appointmentService.cancel(id);
-    successMessage.value = `Cita #${id} cancelada exitosamente.`;
+    const apt = cancellingAppointment.value;
+    const id = apt.id;
+    await appointmentService.cancel(id, reason);
+    const dateFormatted = apt.appointmentDate || "";
+    const slotInfo = apt.startTime && apt.endTime
+      ? ` (${dateFormatted} ${apt.startTime.substring(0, 5)} - ${apt.endTime.substring(0, 5)})`
+      : "";
+    successMessage.value = `Cita #${id} cancelada exitosamente. El espacio${slotInfo} ha quedado liberado.`;
+    closeCancelModal();
     await fetchAppointments();
+    if (showCreateForm.value && form.value.professionalId && form.value.appointmentDate) {
+      await fetchAvailableSlots();
+    }
   } catch (error) {
-    errorMessage.value = error.message || `No se pudo cancelar la cita #${id}.`;
+    cancelError.value =
+      error.response?.data?.message ||
+      error.response?.data?.error ||
+      error.message ||
+      "No se pudo cancelar la cita.";
+  } finally {
+    isCancelling.value = false;
+  }
+}
+
+function handleCancel(appointmentOrId) {
+  if (typeof appointmentOrId === "object" && appointmentOrId !== null) {
+    openCancelModal(appointmentOrId);
+  } else {
+    const app = appointments.value.find((a) => a.id === appointmentOrId);
+    if (app) {
+      openCancelModal(app);
+    } else {
+      openCancelModal({ id: appointmentOrId });
+    }
   }
 }
 
@@ -1058,26 +1125,22 @@ onMounted(async () => {
               <td>
                 <span
                   class="status-badge"
-                  :class="{
-                    'status-scheduled':
-                      item.status === 'SCHEDULED' ||
-                      item.status === 'PROGRAMADA',
-                    'status-completed':
-                      item.status === 'COMPLETED' ||
-                      item.status === 'COMPLETADA',
-                    'status-cancelled':
-                      item.status === 'CANCELLED' ||
-                      item.status === 'CANCELADA',
-                  }"
+                  :class="getStatusBadgeClass(item.status)"
                 >
-                  {{ item.status }}
+                  {{ formatStatus(item.status) }}
                 </span>
+                <div
+                  v-if="item.cancellationReason"
+                  class="cancellation-reason-text"
+                  title="Motivo de la cancelación"
+                >
+                  <small><strong>Motivo:</strong> {{ item.cancellationReason }}</small>
+                </div>
               </td>
-    <!-- TODO -->
 
               <td style="text-align: right">
                 <button
-                  v-if="canManage"
+                  v-if="canManage && !isAppointmentCancelled(item.status)"
                   @click="handleDelete(item.id)"
                   class="btn-danger-sm"
                   title="Cancelar Cita"
@@ -1085,10 +1148,10 @@ onMounted(async () => {
                   Cancelar
                 </button>
                 <button
-                  v-else-if="isPatient"
-                  @click="handleCancel(item.id)"
+                  v-else-if="isPatient && !isAppointmentCancelled(item.status)"
+                  @click="openCancelModal(item)"
                   class="btn-danger-sm"
-                  title="Cancelar Cita"
+                  title="Cancelar mi cita"
                 >
                   Cancelar mi cita
                 </button>
@@ -1097,6 +1160,80 @@ onMounted(async () => {
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Modal para Cancelar Cita (Paciente) -->
+    <div
+      v-if="showCancelModal"
+      class="modal-overlay"
+      @click.self="closeCancelModal"
+    >
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Cancelar Cita Médica</h3>
+          <button
+            @click="closeCancelModal"
+            class="btn-close"
+            title="Cerrar modal"
+            :disabled="isCancelling"
+          >
+            &times;
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div v-if="cancellingAppointment" class="modal-appointment-summary">
+            <p><strong>Cita #{{ cancellingAppointment.id }}</strong></p>
+            <p>
+              <strong>Profesional:</strong>
+              {{ professionalNameById(allProfessionals, cancellingAppointment.professionalId) }}
+            </p>
+            <p>
+              <strong>Fecha:</strong> {{ cancellingAppointment.appointmentDate }}
+            </p>
+            <p>
+              <strong>Horario:</strong> {{ cancellingAppointment.startTime }} - {{ cancellingAppointment.endTime }}
+            </p>
+          </div>
+
+          <p class="modal-instructions">
+            Para proceder con la cancelación de la cita, es <strong>obligatorio</strong> indicar el motivo de la cancelación.
+          </p>
+
+          <div class="form-group">
+            <label for="cancellationReasonInput">Motivo de la cancelación *</label>
+            <textarea
+              id="cancellationReasonInput"
+              v-model="cancellationReason"
+              class="modal-textarea"
+              rows="3"
+              placeholder="Indica la razón por la cual no podrás asistir..."
+              :disabled="isCancelling"
+              @input="cancelError = ''"
+            ></textarea>
+            <span v-if="cancelError" class="field-error">{{ cancelError }}</span>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button
+            type="button"
+            @click="closeCancelModal"
+            class="btn btn-outline"
+            :disabled="isCancelling"
+          >
+            Volver
+          </button>
+          <button
+            type="button"
+            @click="confirmCancelAppointment"
+            class="btn btn-danger"
+            :disabled="isCancelling"
+          >
+            {{ isCancelling ? "Cancelando..." : "Confirmar Cancelación" }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -1690,6 +1827,138 @@ onMounted(async () => {
   font-weight: 600;
   color: #334155;
   margin: 0 0 0.25rem 0;
+}
+
+/* Modal de Cancelación */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-card {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  animation: modal-pop 0.2s ease-out;
+}
+
+@keyframes modal-pop {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #0f172a;
+}
+
+.btn-close {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0;
+}
+
+.btn-close:hover {
+  color: #0f172a;
+}
+
+.modal-body {
+  padding: 1.25rem 1.5rem;
+}
+
+.modal-appointment-summary {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #334155;
+}
+
+.modal-appointment-summary p {
+  margin: 0.2rem 0;
+}
+
+.modal-instructions {
+  font-size: 0.875rem;
+  color: #475569;
+  margin-bottom: 1rem;
+}
+
+.modal-textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.modal-textarea:focus {
+  outline: none;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: white;
+  border: none;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.cancellation-reason-text {
+  font-size: 0.75rem;
+  color: #b91c1c;
+  margin-top: 0.25rem;
+  line-height: 1.2;
 }
 
 </style>
