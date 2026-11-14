@@ -147,19 +147,25 @@ public class AppointmentController {
     }
 
     @PutMapping("/me/cancel/{id}")
-    public ResponseEntity<AppointmentEntity> cancelAppointmentById(@PathVariable Long id) {
+    public ResponseEntity<AppointmentEntity> cancelAppointmentById(@PathVariable Long id, Authentication auth) {
         AppointmentEntity existingAppointment = service.getAppointmentById(id);
-        if (existingAppointment != null) {
-            try {
-                AppointmentEntity app = service.cancelAppointment(existingAppointment);
-                return ResponseEntity.ok(app);
-            } catch (Exception e) {
-                return ResponseEntity
-                        .badRequest()
-                        .build();
-            }
-        } else {
-            return ResponseEntity.notFound().build();
+
+        String username = auth.getName();
+
+        Long patId = service.getPatientIdByUsername(username);
+
+        if (patId == null ||
+                !existingAppointment.getPatientId().equals(patId)) {
+            return ResponseEntity.status(403).build();
+        }
+
+        try {
+            AppointmentEntity app = service.cancelAppointment(existingAppointment);
+
+            return ResponseEntity.ok(app);
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
         }
     }
 }

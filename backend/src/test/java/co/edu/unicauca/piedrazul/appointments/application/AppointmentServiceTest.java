@@ -66,8 +66,7 @@ class AppointmentServiceTest {
                 20L,
                 futureDate,
                 LocalTime.of(9, 0),
-                LocalTime.of(10, 0)
-        );
+                LocalTime.of(10, 0));
 
         when(repository.save(any(AppointmentEntity.class))).thenAnswer(invocation -> {
             AppointmentEntity entity = invocation.getArgument(0);
@@ -312,7 +311,7 @@ class AppointmentServiceTest {
         when(patientService.findByCurrentUser("ana")).thenReturn(patient);
         when(repository.findByPatientId(10L)).thenReturn(List.of(sampleEntity));
 
-        List<AppointmentEntity> result = service.getAppointmentsByUsername("ana", null, null);
+        List<AppointmentEntity> result = service.getAppointmentsByProfessionalDate("ana", null, null);
 
         assertEquals(1, result.size());
         assertEquals(10L, result.getFirst().getPatientId());
@@ -326,9 +325,9 @@ class AppointmentServiceTest {
         when(patientService.findByCurrentUser("ana")).thenReturn(patient);
         when(repository.findByPatientId(10L)).thenReturn(List.of(sampleEntity));
 
-        assertEquals(1, service.getAppointmentsByUsername("ana", 20L, LocalDate.of(2026, 10, 15)).size());
-        assertTrue(service.getAppointmentsByUsername("ana", 99L, null).isEmpty());
-        assertTrue(service.getAppointmentsByUsername("ana", null, LocalDate.of(2026, 1, 1)).isEmpty());
+        assertEquals(1, service.getAppointmentsByProfessionalDate("ana", 20L, LocalDate.of(2026, 10, 15)).size());
+        assertTrue(service.getAppointmentsByProfessionalDate("ana", 99L, null).isEmpty());
+        assertTrue(service.getAppointmentsByProfessionalDate("ana", null, LocalDate.of(2026, 1, 1)).isEmpty());
     }
 
     @Test
@@ -346,7 +345,8 @@ class AppointmentServiceTest {
     @Test
     void testCA1_GetAppointmentHistory_SuccessWithRecords() {
         String doc = "1061789234";
-        PatientResponse patient = new PatientResponse(10L, 2L, doc, "3001234567", LocalDate.of(1995, 5, 20), "Carlos Gomez", "carlos@mail.com");
+        PatientResponse patient = new PatientResponse(10L, 2L, doc, "3001234567", LocalDate.of(1995, 5, 20),
+                "Carlos Gomez", "carlos@mail.com");
         when(patientService.findOptionalByDocumentNumber(doc)).thenReturn(Optional.of(patient));
 
         AppointmentEntity apt1 = new AppointmentEntity();
@@ -386,7 +386,8 @@ class AppointmentServiceTest {
     @Test
     void testCA2_GetAppointmentHistory_PatientWithoutAppointments() {
         String doc = "1061789234";
-        PatientResponse patient = new PatientResponse(10L, 2L, doc, "3001234567", LocalDate.of(1995, 5, 20), "Carlos Gomez", "carlos@mail.com");
+        PatientResponse patient = new PatientResponse(10L, 2L, doc, "3001234567", LocalDate.of(1995, 5, 20),
+                "Carlos Gomez", "carlos@mail.com");
         when(patientService.findOptionalByDocumentNumber(doc)).thenReturn(Optional.of(patient));
         when(repository.findByPatientIdOrderByAppointmentDateDescStartTimeDesc(10L))
                 .thenReturn(Collections.emptyList());
@@ -403,8 +404,8 @@ class AppointmentServiceTest {
         String doc = "9999999999";
         when(patientService.findOptionalByDocumentNumber(doc)).thenReturn(Optional.empty());
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                service.getAppointmentHistoryByDocument(doc));
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> service.getAppointmentHistoryByDocument(doc));
         assertEquals(404, ex.getStatusCode().value());
         assertTrue(ex.getReason().contains("No se encontró ningún paciente registrado con la cédula ingresada"));
     }
